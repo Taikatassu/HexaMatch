@@ -6,25 +6,24 @@ public class HexGrid : MonoBehaviour
 {
     // Original source: https://www.youtube.com/watch?v=konL0iB5gPI
 
-    //TODO: Implement grid filling functionality
-    //          - Elements above empty slots fall down, and new elements are spawned at the top of the grid when necessary to fill topmost slots
-
-    //TODO: Implement relocation "animation" when the elements move when filling grid
-
     //TODO: Implement area-highlight functionality (e.g. highlight all matching elements connected to the selected element) 
 
     //TODO: Implement proper effect manager and relocate selection effect management to that script
+
+    //TODO: Modify elements to use the same prefab, just change the material / texture to match the correct element type
+    //          - Implement pooling for the element visuals
+
+    //TODO: Correct grid start_pos calculations (7x6 grid is centered correctly, 6x5 is not?)
 
     public Transform hex_base_prefab;
     public ElementType[] element_types;
     public GameObject selection_effect_prefab;
     public List<SelectionEffectInfo> selection_effect_infos;
 
-    public bool turn_grid_by_90_degrees = false;
     public bool spawn_hex_bases;
 
-    public int grid_width = 11;
-    public int grid_height = 11;
+    public int grid_width = 7;
+    public int grid_height = 6;
     public int min_viable_connection = 2;
 
     public float selection_effect_height = -0.1f;
@@ -32,6 +31,7 @@ public class HexGrid : MonoBehaviour
     public float gap = 0.0f;
     float hex_width = 1f;
     float hex_height = 0.866f;
+    float element_width = 0.725f;
 
     Vector3 start_pos;
 
@@ -41,19 +41,9 @@ public class HexGrid : MonoBehaviour
     {
         selection_effect_infos = new List<SelectionEffectInfo>();
 
-        if (turn_grid_by_90_degrees)
-            FlipHexDimensions();
-
         AddGap();
         CalculateStartPos();
         CreateGrid();
-    }
-
-    private void FlipHexDimensions()
-    {
-        float old_width = hex_width;
-        hex_width = hex_height;
-        hex_height = old_width;
     }
 
     private void AddGap()
@@ -66,22 +56,13 @@ public class HexGrid : MonoBehaviour
     {
         float x, z = 0;
 
-        if (turn_grid_by_90_degrees)
-        {
-            float x_offset = (grid_height / 2 % 2 == 0) ? 0 : hex_width / 2;
+        float z_offset = (grid_width / 2 % 2 == 0) ? 0 : hex_height / 2;
 
-            x = -hex_width * (grid_width / 2) - x_offset;
-            z = hex_height * 0.75f * (grid_height / 2);
-        }
-        else
-        {
-            float z_offset = (grid_width / 2 % 2 == 0) ? 0 : hex_height / 2;
-
-            x = -hex_width * 0.75f * (grid_width / 2);
-            z = hex_height * (grid_height / 2) - z_offset;
-        }
+        x = -hex_width * 0.75f * (grid_width / 2f);
+        z = hex_height * (grid_height / 2f) - z_offset;
 
         start_pos = new Vector3(x, 0, z);
+        print("Start_pos: " + start_pos);
     }
 
     private void CreateGrid()
@@ -96,15 +77,11 @@ public class HexGrid : MonoBehaviour
                 {
                     SpawnHexBaseTile(x, y);
                 }
-
-                //Vector2 grid_index = new Vector2(x, y);
-                //Vector3 correct_world_pos = CalculateWorldPos(grid_index);
-                //CreateNewGridElement(ChooseRandomElementType(), correct_world_pos, grid_index, this.transform);
             }
         }
 
 
-        FillGrid(new Vector2(0, -1f));
+        FillGrid(new Vector2(0, -1f), true);
     }
 
     private void SpawnHexBaseTile(int grid_index_x, int grid_index_y)
@@ -113,10 +90,6 @@ public class HexGrid : MonoBehaviour
         Vector3 spawn_pos = CalculateWorldPos(new Vector2(grid_index_x, grid_index_y));
         spawn_pos.y = hex_base_height;
         hex.position = spawn_pos;
-        if (turn_grid_by_90_degrees)
-        {
-            hex.eulerAngles = Vector3.up * 90f;
-        }
 
         hex.parent = this.transform;
         hex.name = "HexTile " + grid_index_x + "|" + grid_index_y;
@@ -124,8 +97,7 @@ public class HexGrid : MonoBehaviour
 
     private void CreateNewGridElement(ElementType element_type, Vector3 spawn_pos, Vector2 grid_index, Transform parent)
     {
-        Transform element = Instantiate(element_type.element_prefab).transform;
-        //spawn.position = 
+        Transform element = Instantiate(element_type.element_prefab).transform; 
         element.position = spawn_pos;
         element.parent = parent;
         grid_elements[(int)grid_index.x, (int)grid_index.y] = new GridElementData(element_type, element, CalculateWorldPos(grid_index));
@@ -169,8 +141,9 @@ public class HexGrid : MonoBehaviour
 
                 if (distance_to_correct_pos <= movement_speed * Time.deltaTime)
                 {
-                    print("Element " + indices_to_move[i].x + "|" + indices_to_move[i].y + ", distance_to_correct_pos: " + distance_to_correct_pos);
+                    //print("Element " + indices_to_move[i].x + "|" + indices_to_move[i].y + ", distance_to_correct_pos: " + distance_to_correct_pos);
                     element_to_move.element_transform.position = element_to_move.correct_world_pos;
+                    grid_elements[(int)indices_to_move[i].x, (int)indices_to_move[i].y].just_spawned = false;
                     indices_to_move.RemoveAt(i);
                     i--;
                 }
@@ -225,36 +198,26 @@ public class HexGrid : MonoBehaviour
     {
         float x, z = 0;
 
-        if (turn_grid_by_90_degrees)
-        {
-            float x_offset = (grid_pos.y % 2 == 0) ? 0 : hex_width / 2;
+        float z_offset = (grid_pos.x % 2 == 0) ? 0 : hex_height / 2;
 
-            x = start_pos.x + grid_pos.x * hex_width + x_offset;
-            z = start_pos.z - grid_pos.y * hex_height * 0.75f;
-        }
-        else
-        {
-            float z_offset = (grid_pos.x % 2 == 0) ? 0 : hex_height / 2;
-
-            x = start_pos.x + grid_pos.x * hex_width * 0.75f;
-            z = start_pos.z - grid_pos.y * hex_height + z_offset;
-        }
+        x = start_pos.x + grid_pos.x * hex_width * 0.75f;
+        z = start_pos.z - grid_pos.y * hex_height + z_offset;
 
         return new Vector3(x, 0, z);
     }
 
-    public Vector2 GetGridIndexFromWorldPosition(Vector3 world_pos)
+    public Vector2 GetGridIndexFromWorldPosition(Vector3 world_pos, bool limit_to_element_width = false)
     {
         for (int x = 0; x < grid_elements.GetLength(0); x++)
         {
             for (int y = 0; y < grid_elements.GetLength(1); y++)
             {
                 Vector3 grid_world_pos = CalculateWorldPos(new Vector2(x, y));
-                float half_hex_height = (hex_height - gap) / 2;
-                float x_min = grid_world_pos.x - half_hex_height;
-                float x_max = grid_world_pos.x + half_hex_height;
-                float z_min = grid_world_pos.z - half_hex_height;
-                float z_max = grid_world_pos.z + half_hex_height;
+                float half_area_size = limit_to_element_width ? element_width / 2 : (hex_height - gap) / 2;
+                float x_min = grid_world_pos.x - half_area_size;
+                float x_max = grid_world_pos.x + half_area_size;
+                float z_min = grid_world_pos.z - half_area_size;
+                float z_max = grid_world_pos.z + half_area_size;
 
                 if (world_pos.x >= x_min && world_pos.x <= x_max && world_pos.z >= z_min && world_pos.z <= z_max)
                 {
@@ -344,29 +307,14 @@ public class HexGrid : MonoBehaviour
             if (b_x == a_x && b_y == a_y)
                 return false;
 
-            if (turn_grid_by_90_degrees)
+            if (a_x % 2 == 0)
             {
-                if (a_y % 2 == 0)
-                {
-                    if ((b_y == a_y - 1 || b_y == a_y + 1) && b_x == a_x + 1)
-                        return false;
-                }
-                else if ((b_y == a_y - 1 || b_y == a_y + 1) && b_x == a_x - 1)
-                {
+                if ((b_x == a_x - 1 || b_x == a_x + 1) && b_y == a_y - 1)
                     return false;
-                }
             }
-            else
+            else if ((b_x == a_x - 1 || b_x == a_x + 1) && b_y == a_y + 1)
             {
-                if (a_x % 2 == 0)
-                {
-                    if ((b_x == a_x - 1 || b_x == a_x + 1) && b_y == a_y - 1)
-                        return false;
-                }
-                else if ((b_x == a_x - 1 || b_x == a_x + 1) && b_y == a_y + 1)
-                {
-                    return false;
-                }
+                return false;
             }
 
             return true;
@@ -428,8 +376,13 @@ public class HexGrid : MonoBehaviour
         return false;
     }
 
-    public void FillGrid(Vector2 fall_direction)
+    public void FillGrid(Vector2 fall_direction, bool full_spawn = false)
     {
+        float spawn_offset_per_row = 1.25f;
+        float spawn_offset_per_count = 0.05f;
+        int spawn_count = 0;
+        bool offset_individual_spawns = true;
+
         while (CheckForEmptyGridIndices())
         {
             //Find all empty indices
@@ -445,33 +398,60 @@ public class HexGrid : MonoBehaviour
                         Vector3 descending_element_world_pos = correct_world_pos - fall_direction_3d_normalized * hex_height;
                         Vector2 descending_element_index = GetGridIndexFromWorldPosition(descending_element_world_pos);
 
-                        print(x + "|" + y + " correct_world_pos: " + correct_world_pos + ", fall_direction_3d_normalized: " + fall_direction_3d_normalized 
-                            + ", hex_height: " + hex_height);
-                        print("descending_element_world_pos: " + descending_element_world_pos + ", descending_element_index: " + descending_element_index);
+                        //print(x + "|" + y + " correct_world_pos: " + correct_world_pos + ", fall_direction_3d_normalized: " + fall_direction_3d_normalized
+                        //    + ", hex_height: " + hex_height);
+                        //print("descending_element_world_pos: " + descending_element_world_pos + ", descending_element_index: " + descending_element_index);
                         if (descending_element_index.x >= 0 && descending_element_index.x < grid_elements.GetLength(0)
                             && descending_element_index.y >= 0 && descending_element_index.y < grid_elements.GetLength(1))
                         {
                             //"Drop" elements above the empty indices to fill the empty ones
-                            GridElementData grid_element  = grid_elements[(int)descending_element_index.x, (int)descending_element_index.y];
-                            if (grid_element.element_transform != null)
+                            GridElementData grid_element = grid_elements[(int)descending_element_index.x, (int)descending_element_index.y];
+                            if (!(full_spawn && grid_element.element_transform == null))
                             {
                                 grid_elements[x, y] = grid_element;
                                 grid_elements[x, y].correct_world_pos = correct_world_pos;
                                 RemoveElementAtIndex(descending_element_index, false);
-                                print("Dropped an element from " + descending_element_index + " to fill an empty index at " + x + "|" + y);
+                                //print("Dropped an element from " + descending_element_index + " to fill an empty index at " + x + "|" + y);
                                 continue;
                             }
-                            //else
-                            //{
-                            //    print("Grid element to drop was empty, spawning a new one");
-                            //}
                         }
 
-                        //TODO: Spawn newly spawned elements on in a line, not at the same point
-                        //  - (Store newly spawned elements' spawn points, and when spawning a next one, 
-                        //    compare to existing spawns, and increment position if necessary?)
-                        print("FillGrid: Creating new element at " + x + "|" + y);
+
+                        //Count the number of elements spawned on the same column on this turn
+                        //TODO: Modify this to work with any fall direction (currently only works with a fall direction where x == 0 && y < 0)
+                        int number_of_newly_spawned_elements_under_this_one = 0;
+                        for (int y_2 = y + 1; y_2 < grid_elements.GetLength(1); y_2++)
+                        {
+                            GridElementData grid_element = grid_elements[x, y_2];
+                            if (grid_element.element_transform != null)
+                            {
+                                if(grid_element.just_spawned)
+                                {
+                                    number_of_newly_spawned_elements_under_this_one++;
+                                }
+                            }
+                        }
+
+                        //Calculate the proper spawn position
+                        Vector3 spawn_pos_offset = -fall_direction_3d_normalized * hex_height
+                            * (number_of_newly_spawned_elements_under_this_one + 1);
+
+                        if (offset_individual_spawns)
+                        {
+                            spawn_pos_offset  *= (1 + (spawn_offset_per_count * spawn_count)); //+= spawn_pos_offset
+                        }
+                        if (!full_spawn)
+                        {
+                            spawn_pos_offset *= Mathf.Pow(spawn_offset_per_row, number_of_newly_spawned_elements_under_this_one + 1);
+                        }
+
+                        descending_element_world_pos = correct_world_pos + spawn_pos_offset;
+
+                        //print("FillGrid: Creating new element at " + x + "|" + y + ", spawn_pos: " + descending_element_world_pos 
+                        //    + ", number_of_newly_spawned_elements_under_this_one: " + number_of_newly_spawned_elements_under_this_one);
+
                         CreateNewGridElement(ChooseRandomElementType(), descending_element_world_pos, new Vector2(x, y), this.transform);
+                        spawn_count++;
                     }
                 }
             }
@@ -487,7 +467,7 @@ public class HexGrid : MonoBehaviour
         CreateGrid();
     }
 
-    public void SpawnSelectionEffectAtIndex(Vector2 grid_index, bool auto_disable = false)
+    public void SpawnSelectionEffectAtIndex(Vector2 grid_index)
     {
         //TODO: Pool management
 
@@ -531,12 +511,14 @@ public struct GridElementData
     public ElementType element_type;
     public Transform element_transform;
     public Vector3 correct_world_pos;
+    public bool just_spawned;
 
     public GridElementData(ElementType _element_type, Transform _element_transform, Vector3 _correct_world_pos)
     {
         element_type = _element_type;
         element_transform = _element_transform;
         correct_world_pos = _correct_world_pos;
+        just_spawned = true;
     }
 }
 

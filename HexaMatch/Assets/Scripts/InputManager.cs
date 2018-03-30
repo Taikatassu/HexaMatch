@@ -161,7 +161,7 @@ public class InputManager : MonoBehaviour
                     {
                         selected_element_indices.Add(hit_grid_index);
                         selected_element_type = grid.GetElementDataFromIndex(hit_grid_index).element_type;
-                        print("Selected_element_type: " + selected_element_type);
+                        print("Selected_element_type: " + selected_element_type + " at " + hit_grid_index);
                         if (selected_element_type != null)
                         {
                             invalid_selection = false;
@@ -303,7 +303,7 @@ public class InputManager : MonoBehaviour
         RaycastHit hit;
         if (Physics.Raycast(ray, out hit))
         {
-            return grid.GetGridIndexFromWorldPosition(hit.point);
+            return grid.GetGridIndexFromWorldPosition(hit.point, true);
         }
 
         return new Vector2(-1f, -1f);
