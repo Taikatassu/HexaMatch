@@ -294,6 +294,12 @@ public class InputManager : MonoBehaviour
                 grid.GetNeighbouringIndices(hit_grid_index);
             }
         }
+
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            print("Space pressed.");
+            grid.RemoveMatches();
+        }
     }
 
     /* - Currently obsolete functions - 

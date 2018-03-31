@@ -15,6 +15,12 @@ public class HexGrid : MonoBehaviour
 
     //TODO: Correct grid start_pos calculations (7x6 grid is centered correctly, 6x5 is not?)
 
+    //TODO: Implement a method to check for x number of matching neighbouring tiles
+    //          - Finish implementing this
+    //          - Find out why unity freezes when recursing through matches to remove and movement animations
+
+    //TODO: Fix initial spawn positons (when restarting, elements spawn in the middle of the grid, instead of above the top of the screen!)
+
     public Transform hex_base_prefab;
     public ElementType[] element_types;
     public GameObject selection_effect_prefab;
@@ -25,6 +31,7 @@ public class HexGrid : MonoBehaviour
     public int grid_width = 7;
     public int grid_height = 6;
     public int min_viable_connection = 2;
+    public int min_auto_match_connection = 5;
 
     public float selection_effect_height = -0.1f;
     public float hex_base_height = -0.25f;
@@ -32,6 +39,8 @@ public class HexGrid : MonoBehaviour
     float hex_width = 1f;
     float hex_height = 0.866f;
     float element_width = 0.725f;
+
+    Coroutine element_movement;
 
     Vector3 start_pos;
 
@@ -97,7 +106,7 @@ public class HexGrid : MonoBehaviour
 
     private void CreateNewGridElement(ElementType element_type, Vector3 spawn_pos, Vector2 grid_index, Transform parent)
     {
-        Transform element = Instantiate(element_type.element_prefab).transform; 
+        Transform element = Instantiate(element_type.element_prefab).transform;
         element.position = spawn_pos;
         element.parent = parent;
         grid_elements[(int)grid_index.x, (int)grid_index.y] = new GridElementData(element_type, element, CalculateWorldPos(grid_index));
@@ -106,6 +115,107 @@ public class HexGrid : MonoBehaviour
     private ElementType ChooseRandomElementType()
     {
         return element_types[Random.Range(0, element_types.Length)];
+    }
+
+    private List<Vector2> FindMatchesOnGrid(int min_neighbour_count, ElementType element_type)
+    {
+        List<Vector2> all_matching_element_indices = new List<Vector2>();
+        List<Vector2> indices_already_checked = new List<Vector2>();
+
+        //Loop through grid elements
+        for (int x = 0; x < grid_elements.GetLength(0); x++)
+        {
+            for (int y = 0; y < grid_elements.GetLength(1); y++)
+            {
+                if (indices_already_checked.Contains(new Vector2(x, y)))
+                {
+                    print("Skipping index already checked at " + x + "|" + y);
+                    continue;
+                }
+
+                //If the element is of matching type with the element to check against
+                if (IsOfMatchingElementType(element_type, grid_elements[x, y].element_type))
+                {
+                    print("Found element matching with the type to check at " + x + "|" + y);
+                    //Store the matching neighbours on a one list
+                    List<Vector2> matching_neighbours = new List<Vector2>();
+                    //And the matching neighbours whose neighbours we have yet to check, on another list
+                    List<Vector2> matching_neighbours_to_check = new List<Vector2>();
+                    //Add the current element as the first item on both lists
+                    matching_neighbours.Add(new Vector2(x, y));
+                    matching_neighbours_to_check.Add(new Vector2(x, y));
+
+                    //Check neighbours of all the neighbouring matches, until no unchecked matching neighbours are left
+                    while (matching_neighbours_to_check.Count > 0)
+                    {
+                        if (!indices_already_checked.Contains(matching_neighbours_to_check[0]))
+                            indices_already_checked.Add(matching_neighbours_to_check[0]);
+
+                        print("matching_neighbours_to_check.Count > 0, continuing while loop");
+                        List<Vector2> neighbouring_indices = GetNeighbouringIndices(matching_neighbours_to_check[0]);
+
+                        for (int i = 0; i < neighbouring_indices.Count; i++)
+                        {
+                            if (IsOfMatchingElementType(element_type, grid_elements[(int)neighbouring_indices[i].x, (int)neighbouring_indices[i].y].element_type))
+                            {
+                                if (!matching_neighbours.Contains(neighbouring_indices[i]))
+                                {
+                                    matching_neighbours.Add(neighbouring_indices[i]);
+                                    matching_neighbours_to_check.Add(neighbouring_indices[i]);
+                                }
+                            }
+                        }
+
+                        print("Removing matching neighbour at index " + matching_neighbours_to_check[0] + " to check from list.");
+                        matching_neighbours_to_check.RemoveAt(0);
+                    }
+
+                    if (matching_neighbours.Count >= min_auto_match_connection)
+                    {
+                        print("Connected matches of index " + x + "|" + y + " checked, adding " + matching_neighbours.Count + " indices to the match list.");
+                        all_matching_element_indices.AddRange(matching_neighbours);
+                    }
+                    else
+                    {
+                        print("Connected matches of index " + x + "|" + y + " checked, connected element count not big enough for match, ignoring indices (matching_neighbours.Count: " + matching_neighbours.Count + ").");
+                    }
+                }
+            }
+        }
+
+        return all_matching_element_indices;
+    }
+
+    private bool IsOfMatchingElementType(ElementType main_type, ElementType other_type)
+    {
+        if (other_type == main_type)
+        {
+            return true;
+        }
+
+        for (int i = 0; i < main_type.matching_elements.Length; i++)
+        {
+            if (other_type == main_type.matching_elements[i])
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void ElementMovementFinished()
+    {
+        if(RemoveMatches() != 0)
+        {
+            print("Removed more matches, starting animations again.");
+            MoveElementsToCorrectPositions();
+        }
+        else
+        {
+            //StopCoroutine(element_movement);
+            //element_movement = null;
+        }
     }
 
     private IEnumerator MoveAllElementsTowardsCorrectWorldPositions(float movement_speed_increment_multiplier = 1f)
@@ -132,8 +242,10 @@ public class HexGrid : MonoBehaviour
 
         while (indices_to_move.Count > 0)
         {
+            //print("indices_to_move.Count > 0, while-loop continuing");
             for (int i = 0; i < indices_to_move.Count; i++)
             {
+                //print("In for-loop, at indices_to_move[" + i + "].");
                 GridElementData element_to_move = grid_elements[(int)indices_to_move[i].x, (int)indices_to_move[i].y];
 
                 Vector3 direction_to_correct_pos = element_to_move.correct_world_pos - element_to_move.element_transform.position;
@@ -144,6 +256,8 @@ public class HexGrid : MonoBehaviour
                     //print("Element " + indices_to_move[i].x + "|" + indices_to_move[i].y + ", distance_to_correct_pos: " + distance_to_correct_pos);
                     element_to_move.element_transform.position = element_to_move.correct_world_pos;
                     grid_elements[(int)indices_to_move[i].x, (int)indices_to_move[i].y].just_spawned = false;
+                    //print("Element at " + indices_to_move[i] + " has arrived at correct world pos. indices_to_move.Count: " 
+                    //    + indices_to_move.Count + ", i: " + i);
                     indices_to_move.RemoveAt(i);
                     i--;
                 }
@@ -156,15 +270,23 @@ public class HexGrid : MonoBehaviour
 
             movement_speed += movement_speed_increment_per_second * movement_speed_increment_multiplier * Time.deltaTime;
 
+            //print("Before wait");
             yield return new WaitForEndOfFrame();
+            //print("After wait");
         }
 
         print("Finished drop 'animations'.");
+        //ElementMovementFinished();
     }
 
     public void MoveElementsToCorrectPositions(float movement_speed_increment_multiplier = 1f)
     {
-        StartCoroutine(MoveAllElementsTowardsCorrectWorldPositions(movement_speed_increment_multiplier));
+        if (element_movement != null)
+        {
+            StopCoroutine(element_movement);
+        }
+
+        element_movement = StartCoroutine(MoveAllElementsTowardsCorrectWorldPositions(movement_speed_increment_multiplier));
     }
 
     public void SwapElements(Vector2 a_index, Vector2 b_index)
@@ -267,7 +389,7 @@ public class HexGrid : MonoBehaviour
         return grid_elements[(int)grid_index.x, (int)grid_index.y];
     }
 
-    public Vector2[] GetNeighbouringIndices(Vector2 grid_index)
+    public List<Vector2> GetNeighbouringIndices(Vector2 grid_index)
     {
         int index_x = (int)grid_index.x;
         int index_y = (int)grid_index.y;
@@ -292,7 +414,7 @@ public class HexGrid : MonoBehaviour
 
         print("Element " + index_x + "|" + index_y + " neighbour count: " + neighbours.Count);
 
-        return neighbours.ToArray();
+        return neighbours;
     }
 
     public bool CheckIfNeighbours(Vector2 a_index, Vector2 b_index)
@@ -326,6 +448,18 @@ public class HexGrid : MonoBehaviour
         }
 
         return false;
+    }
+
+    public int RemoveMatches()
+    {
+        List<Vector2> match_indices = new List<Vector2>();
+        for (int i = 0; i < element_types.Length; i++)
+        {
+            match_indices.AddRange(FindMatchesOnGrid(min_auto_match_connection, element_types[i]));
+        }
+
+        RemoveElementsAtIndices(match_indices);
+        return match_indices.Count;
     }
 
     public void RemoveElementAtIndex(Vector2 grid_index, bool destroy_attached_transform = true)
@@ -430,7 +564,7 @@ public class HexGrid : MonoBehaviour
                             GridElementData grid_element = grid_elements[x, y_2];
                             if (grid_element.element_transform != null)
                             {
-                                if(grid_element.just_spawned)
+                                if (grid_element.just_spawned)
                                 {
                                     number_of_newly_spawned_elements_under_this_one++;
                                 }
@@ -443,7 +577,7 @@ public class HexGrid : MonoBehaviour
 
                         if (offset_individual_spawns)
                         {
-                            spawn_pos_offset  *= (1 + (spawn_offset_per_count * spawn_count)); //+= spawn_pos_offset
+                            spawn_pos_offset *= (1 + (spawn_offset_per_count * spawn_count)); //+= spawn_pos_offset
                         }
                         if (!full_spawn)
                         {
