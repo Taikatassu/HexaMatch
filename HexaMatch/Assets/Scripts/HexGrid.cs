@@ -108,7 +108,7 @@ public class HexGrid : MonoBehaviour
         return element_types[Random.Range(0, element_types.Length)];
     }
 
-    private IEnumerator MoveAllDroppingElementsTowardsCorrectWorldPositions()
+    private IEnumerator MoveAllElementsTowardsCorrectWorldPositions(float movement_speed_increment_multiplier = 1f)
     {
         print("Starting drop 'animations'.");
 
@@ -154,12 +154,17 @@ public class HexGrid : MonoBehaviour
                 }
             }
 
-            movement_speed += movement_speed_increment_per_second * Time.deltaTime;
+            movement_speed += movement_speed_increment_per_second * movement_speed_increment_multiplier * Time.deltaTime;
 
             yield return new WaitForEndOfFrame();
         }
 
         print("Finished drop 'animations'.");
+    }
+
+    public void MoveElementsToCorrectPositions(float movement_speed_increment_multiplier = 1f)
+    {
+        StartCoroutine(MoveAllElementsTowardsCorrectWorldPositions(movement_speed_increment_multiplier));
     }
 
     public void SwapElements(Vector2 a_index, Vector2 b_index)
@@ -176,8 +181,8 @@ public class HexGrid : MonoBehaviour
         grid_elements[b_x, b_y] = old_a;
         grid_elements[b_x, b_y].correct_world_pos = b_world_pos;
 
-        ResetElementWorldPos(a_index);
-        ResetElementWorldPos(b_index);
+        //ResetElementWorldPos(a_index);
+        //ResetElementWorldPos(b_index);
 
         //grid_elements[a_x, a_y].world_pos = CalculateWorldPos(a_index);
         //grid_elements[b_x, b_y].world_pos = CalculateWorldPos(b_index);
@@ -457,7 +462,7 @@ public class HexGrid : MonoBehaviour
             }
         }
 
-        StartCoroutine(MoveAllDroppingElementsTowardsCorrectWorldPositions());
+        MoveElementsToCorrectPositions();
     }
 
     public void Restart()

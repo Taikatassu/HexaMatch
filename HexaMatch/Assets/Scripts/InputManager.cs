@@ -29,6 +29,7 @@ public class InputManager : MonoBehaviour
 
     public float selection_line_height = 1f;
 
+    float swap_movement_speed_increment_multiplier = 8f;
     int score = 0;
     int moves = 0;
     bool invalid_selection = false;
@@ -119,21 +120,35 @@ public class InputManager : MonoBehaviour
                     Vector2 hit_grid_index = GetGridIndexUnderMousePos();
                     if (hit_grid_index.x >= 0 && hit_grid_index.y >= 0)
                     {
-                        Vector2 release_point_index = hit_grid_index;
-                        print("Released element at index " + release_point_index + ", swapping positions");
+                        if (selected_element_indices.Contains(hit_grid_index))
+                        {
+                            print("Grabbed element released at it's original index, resetting element position.");
+                            //grid.ResetElementWorldPos(selected_element_indices[0]);
 
-                        //TODO: Check if hit_tile is on a viable lane (e.g. if swap is restricted on the same lanes as the grabbed element)
+                            grid.MoveElementsToCorrectPositions(swap_movement_speed_increment_multiplier);
+                        }
+                        else
+                        {
+                            Vector2 release_point_index = hit_grid_index;
+                            print("Released element at index " + release_point_index + ", swapping positions");
 
-                        //TODO: Check if valid move (e.g. if swap allowed only when it results in a match; pre-check match)
+                            //TODO: Check if hit_tile is on a viable lane (e.g. if swap is restricted on the same lanes as the grabbed element)
 
-                        grid.SwapElements(selected_element_indices[0], release_point_index);
+                            //TODO: Check if valid move (e.g. if swap allowed only when it results in a match; pre-check match)
 
-                        IncrementMoves();
+                            grid.SwapElements(selected_element_indices[0], release_point_index);
+
+                            grid.MoveElementsToCorrectPositions(swap_movement_speed_increment_multiplier);
+
+                            IncrementMoves();
+                        }
                     }
                     else
                     {
-                        print("Released element outside of the grid, resetting element position");
-                        grid.ResetElementWorldPos(selected_element_indices[0]);
+                        print("Released element outside of the grid, resetting element position.");
+                        //grid.ResetElementWorldPos(selected_element_indices[0]);
+
+                        grid.MoveElementsToCorrectPositions(swap_movement_speed_increment_multiplier);
                     }
 
                     selected_element_indices.Clear();
