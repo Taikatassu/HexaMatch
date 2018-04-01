@@ -775,7 +775,7 @@ MonoBehaviour:
   grid_width: 6
   grid_height: 6
   min_viable_connection: 2
-  min_auto_match_connection: 5
+  min_auto_match_connection: 10
   selection_effect_height: -0.1
   hex_base_height: -0.25
   gap: 0.1

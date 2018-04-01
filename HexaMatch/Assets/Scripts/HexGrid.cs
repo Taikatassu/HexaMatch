@@ -6,6 +6,8 @@ public class HexGrid : MonoBehaviour
 {
     // Original source: https://www.youtube.com/watch?v=konL0iB5gPI
 
+    //TODO: Implement more effects, both visual and audio (match collection, points received, etc.)
+
     //TODO: Implement area-highlight functionality (e.g. highlight all matching elements connected to the selected element) 
 
     //TODO: Implement proper effect manager and relocate selection effect management to that script
@@ -15,11 +17,7 @@ public class HexGrid : MonoBehaviour
 
     //TODO: Correct grid start_pos calculations (7x6 grid is centered correctly, 6x5 is not?)
 
-    //TODO: Implement a method to check for x number of matching neighbouring tiles
-    //          - Finish implementing this
-    //          - Find out why unity freezes when recursing through matches to remove and movement animations
-
-    //TODO: Fix initial spawn positons (when restarting, elements spawn in the middle of the grid, instead of above the top of the screen!)
+    //TODO: Lock / ignore inputs during drop animations?
 
     public Transform hex_base_prefab;
     public ElementType[] element_types;
@@ -31,20 +29,23 @@ public class HexGrid : MonoBehaviour
     public int grid_width = 7;
     public int grid_height = 6;
     public int min_viable_connection = 2;
-    public int min_auto_match_connection = 5;
+    public int min_auto_match_connection = 10;
 
-    public float selection_effect_height = -0.1f;
-    public float hex_base_height = -0.25f;
+    public float selection_effect_y_pos = -0.1f;
+    public float hex_base_y_pos = -0.25f;
     public float gap = 0.0f;
-    float hex_width = 1f;
-    float hex_height = 0.866f;
-    float element_width = 0.725f;
 
-    Coroutine element_movement;
+    private float hex_width = 1f;
+    private float hex_height = 0.866f;
+    private float element_width = 0.725f;
+    private float spawn_offset_per_row = 1.25f;
+    private float spawn_offset_per_count = 0.05f;
 
-    Vector3 start_pos;
+    private bool offset_individual_spawns = true;
 
-    GridElementData[,] grid_elements;
+    private Vector3 start_pos;
+    private Coroutine element_movement;
+    private GridElementData[,] grid_elements;
 
     private void Start()
     {
@@ -71,33 +72,45 @@ public class HexGrid : MonoBehaviour
         z = hex_height * (grid_height / 2f) - z_offset;
 
         start_pos = new Vector3(x, 0, z);
-        print("Start_pos: " + start_pos);
+        //print("Start_pos: " + start_pos);
     }
 
     private void CreateGrid()
     {
-        grid_elements = new GridElementData[grid_width, grid_height];
+        if (spawn_hex_bases)
+        {
+            CreateGridBase();
+        }
 
+        InitializeGridElements();
+    }
+
+    private void CreateGridBase()
+    {
         for (int x = 0; x < grid_width; x++)
         {
             for (int y = 0; y < grid_height; y++)
             {
-                if (spawn_hex_bases)
-                {
-                    SpawnHexBaseTile(x, y);
-                }
+                SpawnHexBaseTile(x, y);
             }
         }
+    }
 
+    private void InitializeGridElements()
+    {
+        grid_elements = new GridElementData[grid_width, grid_height];
 
         FillGrid(new Vector2(0, -1f), true);
+        ClearGridOfAutoMatches();
+        RecalculateSpawnPositions(new Vector2(0, -1f));
+        MoveElementsToCorrectPositions();
     }
 
     private void SpawnHexBaseTile(int grid_index_x, int grid_index_y)
     {
         Transform hex = Instantiate(hex_base_prefab) as Transform;
         Vector3 spawn_pos = CalculateWorldPos(new Vector2(grid_index_x, grid_index_y));
-        spawn_pos.y = hex_base_height;
+        spawn_pos.y = hex_base_y_pos;
         hex.position = spawn_pos;
 
         hex.parent = this.transform;
@@ -129,14 +142,14 @@ public class HexGrid : MonoBehaviour
             {
                 if (indices_already_checked.Contains(new Vector2(x, y)))
                 {
-                    print("Skipping index already checked at " + x + "|" + y);
+                    //print("Skipping index already checked at " + x + "|" + y);
                     continue;
                 }
 
                 //If the element is of matching type with the element to check against
                 if (IsOfMatchingElementType(element_type, grid_elements[x, y].element_type))
                 {
-                    print("Found element matching with the type to check at " + x + "|" + y);
+                    //print("Found element matching with the type to check at " + x + "|" + y);
                     //Store the matching neighbours on a one list
                     List<Vector2> matching_neighbours = new List<Vector2>();
                     //And the matching neighbours whose neighbours we have yet to check, on another list
@@ -151,7 +164,6 @@ public class HexGrid : MonoBehaviour
                         if (!indices_already_checked.Contains(matching_neighbours_to_check[0]))
                             indices_already_checked.Add(matching_neighbours_to_check[0]);
 
-                        print("matching_neighbours_to_check.Count > 0, continuing while loop");
                         List<Vector2> neighbouring_indices = GetNeighbouringIndices(matching_neighbours_to_check[0]);
 
                         for (int i = 0; i < neighbouring_indices.Count; i++)
@@ -166,19 +178,19 @@ public class HexGrid : MonoBehaviour
                             }
                         }
 
-                        print("Removing matching neighbour at index " + matching_neighbours_to_check[0] + " to check from list.");
+                        //print("Removing matching neighbour at index " + matching_neighbours_to_check[0] + " to check from list.");
                         matching_neighbours_to_check.RemoveAt(0);
                     }
 
                     if (matching_neighbours.Count >= min_auto_match_connection)
                     {
-                        print("Connected matches of index " + x + "|" + y + " checked, adding " + matching_neighbours.Count + " indices to the match list.");
+                        //print("Connected matches of index " + x + "|" + y + " checked, adding " + matching_neighbours.Count + " indices to the match list.");
                         all_matching_element_indices.AddRange(matching_neighbours);
                     }
-                    else
-                    {
-                        print("Connected matches of index " + x + "|" + y + " checked, connected element count not big enough for match, ignoring indices (matching_neighbours.Count: " + matching_neighbours.Count + ").");
-                    }
+                    //else
+                    //{
+                    //    print("Connected matches of index " + x + "|" + y + " checked, connected element count not big enough for match, ignoring indices (matching_neighbours.Count: " + matching_neighbours.Count + ").");
+                    //}
                 }
             }
         }
@@ -204,24 +216,56 @@ public class HexGrid : MonoBehaviour
         return false;
     }
 
+    private void RecalculateSpawnPositions(Vector2 fall_direction)
+    {
+        Vector3 fall_direction_3d_normalized = new Vector3(fall_direction.x, 0, fall_direction.y).normalized;
+
+        int spawn_count = 0;
+
+        for (int x = grid_elements.GetLength(0) - 1; x >= 0; x--)
+        {
+            for (int y = grid_elements.GetLength(1) - 1; y >= 0; y--)
+            {
+                int number_of_elements_under_this_one = grid_elements.GetLength(1) - (y + 1);
+
+                Vector3 spawn_pos_offset = -fall_direction_3d_normalized * hex_height
+                    * (number_of_elements_under_this_one + 1 + grid_elements.GetLength(1));
+
+                if (offset_individual_spawns)
+                {
+                    spawn_pos_offset *= (1 + (spawn_offset_per_count * spawn_count));
+                }
+
+                Vector3 spawn_pos = CalculateWorldPos(new Vector2(x, y)) + spawn_pos_offset;
+
+                grid_elements[x, y].element_transform.position = spawn_pos;
+                spawn_count++;
+            }
+        }
+    }
+
+    private void ClearGridOfAutoMatches()
+    {
+        while (RemoveMatches() > 0)
+        {
+            print("Found and removed auto-matches; filling grid and redoing.");
+            FillGrid(new Vector2(0, -1f));
+        }
+    }
+
     private void ElementMovementFinished()
     {
-        if(RemoveMatches() != 0)
+        if (RemoveMatches() > 0)
         {
-            print("Removed more matches, starting animations again.");
+            print("Removed more matches; filling grid and starting drop animations again.");
+            FillGrid(new Vector2(0, -1f));
             MoveElementsToCorrectPositions();
-        }
-        else
-        {
-            //StopCoroutine(element_movement);
-            //element_movement = null;
         }
     }
 
     private IEnumerator MoveAllElementsTowardsCorrectWorldPositions(float movement_speed_increment_multiplier = 1f)
     {
         print("Starting drop 'animations'.");
-
         float movement_speed = 0f;
         float movement_speed_increment_per_second = 25f;
 
@@ -238,14 +282,12 @@ public class HexGrid : MonoBehaviour
             }
         }
 
-        print("Indices to move count " + indices_to_move.Count);
+        //print("Indices to move count " + indices_to_move.Count);
 
         while (indices_to_move.Count > 0)
         {
-            //print("indices_to_move.Count > 0, while-loop continuing");
             for (int i = 0; i < indices_to_move.Count; i++)
             {
-                //print("In for-loop, at indices_to_move[" + i + "].");
                 GridElementData element_to_move = grid_elements[(int)indices_to_move[i].x, (int)indices_to_move[i].y];
 
                 Vector3 direction_to_correct_pos = element_to_move.correct_world_pos - element_to_move.element_transform.position;
@@ -253,10 +295,9 @@ public class HexGrid : MonoBehaviour
 
                 if (distance_to_correct_pos <= movement_speed * Time.deltaTime)
                 {
-                    //print("Element " + indices_to_move[i].x + "|" + indices_to_move[i].y + ", distance_to_correct_pos: " + distance_to_correct_pos);
                     element_to_move.element_transform.position = element_to_move.correct_world_pos;
                     grid_elements[(int)indices_to_move[i].x, (int)indices_to_move[i].y].just_spawned = false;
-                    //print("Element at " + indices_to_move[i] + " has arrived at correct world pos. indices_to_move.Count: " 
+                    //print("Element at " + indices_to_move[i] + " has arrived at correct world pos. indices_to_move.Count: "
                     //    + indices_to_move.Count + ", i: " + i);
                     indices_to_move.RemoveAt(i);
                     i--;
@@ -270,13 +311,11 @@ public class HexGrid : MonoBehaviour
 
             movement_speed += movement_speed_increment_per_second * movement_speed_increment_multiplier * Time.deltaTime;
 
-            //print("Before wait");
             yield return new WaitForEndOfFrame();
-            //print("After wait");
         }
 
         print("Finished drop 'animations'.");
-        //ElementMovementFinished();
+        ElementMovementFinished();
     }
 
     public void MoveElementsToCorrectPositions(float movement_speed_increment_multiplier = 1f)
@@ -384,7 +423,7 @@ public class HexGrid : MonoBehaviour
     }
     */
 
-    public GridElementData GetElementDataFromIndex(Vector2 grid_index)
+    public GridElementData GetGridElementDataFromIndex(Vector2 grid_index)
     {
         return grid_elements[(int)grid_index.x, (int)grid_index.y];
     }
@@ -412,7 +451,7 @@ public class HexGrid : MonoBehaviour
             }
         }
 
-        print("Element " + index_x + "|" + index_y + " neighbour count: " + neighbours.Count);
+        //print("Element " + index_x + "|" + index_y + " neighbour count: " + neighbours.Count);
 
         return neighbours;
     }
@@ -459,6 +498,7 @@ public class HexGrid : MonoBehaviour
         }
 
         RemoveElementsAtIndices(match_indices);
+        print("Removed " + match_indices.Count + " elements due to auto-matching.");
         return match_indices.Count;
     }
 
@@ -482,8 +522,6 @@ public class HexGrid : MonoBehaviour
         {
             RemoveElementAtIndex(grid_indices[i]);
         }
-
-        FillGrid(new Vector2(0, -1f));
     }
 
     public void RemoveAllElements()
@@ -517,10 +555,7 @@ public class HexGrid : MonoBehaviour
 
     public void FillGrid(Vector2 fall_direction, bool full_spawn = false)
     {
-        float spawn_offset_per_row = 1.25f;
-        float spawn_offset_per_count = 0.05f;
         int spawn_count = 0;
-        bool offset_individual_spawns = true;
 
         while (CheckForEmptyGridIndices())
         {
@@ -595,26 +630,23 @@ public class HexGrid : MonoBehaviour
                 }
             }
         }
-
-        MoveElementsToCorrectPositions();
     }
 
     public void Restart()
     {
-        spawn_hex_bases = false;
         RemoveAllElements();
-        CreateGrid();
+        InitializeGridElements();
     }
 
     public void SpawnSelectionEffectAtIndex(Vector2 grid_index)
     {
         //TODO: Pool management
 
-        Vector3 spawn_pos = GetElementDataFromIndex(grid_index).correct_world_pos;
-        spawn_pos.y = selection_effect_height;
+        Vector3 spawn_pos = GetGridElementDataFromIndex(grid_index).correct_world_pos;
+        spawn_pos.y = selection_effect_y_pos;
         GameObject new_effect = Instantiate(selection_effect_prefab);
         new_effect.transform.position = spawn_pos;
-        new_effect.transform.SetParent(GetElementDataFromIndex(grid_index).element_transform);
+        new_effect.transform.SetParent(GetGridElementDataFromIndex(grid_index).element_transform);
 
         selection_effect_infos.Add(new SelectionEffectInfo(grid_index, new_effect));
     }
@@ -628,7 +660,7 @@ public class HexGrid : MonoBehaviour
                 if (selection_effect_infos[i].selection_effect != null)
                     Destroy(selection_effect_infos[i].selection_effect);
                 selection_effect_infos.RemoveAt(i);
-                print("Removed selection effect at index: " + grid_index);
+                //print("Removed selection effect at index: " + grid_index);
                 break;
             }
         }

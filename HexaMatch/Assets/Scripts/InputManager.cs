@@ -5,6 +5,13 @@ using UnityEngine.UI;
 
 public class InputManager : MonoBehaviour
 {
+    //Swap selecttion mode:
+    //TODO: Highlight available directions
+    //TODO: Check if hit_tile is on a viable lane (e.g. if swap is restricted on the same lanes as the grabbed element)
+    //TODO: Check if valid move (e.g. if swap allowed only when it results in a match; pre-check match)
+
+    //TODO: Separate inputs and game logic to individual scripts (InputManager & GameManager / MatchManager)
+
     public enum ESelectionMode
     {
         SWAP,
@@ -61,7 +68,7 @@ public class InputManager : MonoBehaviour
                     {
                         selected_element_indices = new List<Vector2>();
                         selected_element_indices.Add(hit_grid_index);
-                        GridElementData element_data = grid.GetElementDataFromIndex(selected_element_indices[0]);
+                        GridElementData element_data = grid.GetGridElementDataFromIndex(selected_element_indices[0]);
                         selected_element_type = element_data.element_type;
                         print("Selected_element_type: " + selected_element_type);
                         if (selected_element_type != null)
@@ -69,7 +76,7 @@ public class InputManager : MonoBehaviour
                             selected_element_transform = element_data.element_transform;
                             grid.SpawnSelectionEffectAtIndex(hit_grid_index);
 
-                            //TODO: Highlight available directions
+                            //TODO HERE: Highlight available directions
 
                             print("Grabbing tile at index " + selected_element_indices[0]);
                         }
@@ -97,7 +104,7 @@ public class InputManager : MonoBehaviour
                             {
                                 if (!selected_element_indices.Contains(hit_grid_index))
                                 {
-                                    ElementType hit_element_type = grid.GetElementDataFromIndex(hit_grid_index).element_type;
+                                    ElementType hit_element_type = grid.GetGridElementDataFromIndex(hit_grid_index).element_type;
 
                                     if (hit_element_type != null)
                                     {
@@ -123,7 +130,6 @@ public class InputManager : MonoBehaviour
                         if (selected_element_indices.Contains(hit_grid_index))
                         {
                             print("Grabbed element released at it's original index, resetting element position.");
-                            //grid.ResetElementWorldPos(selected_element_indices[0]);
 
                             grid.MoveElementsToCorrectPositions(swap_movement_speed_increment_multiplier);
                         }
@@ -132,21 +138,19 @@ public class InputManager : MonoBehaviour
                             Vector2 release_point_index = hit_grid_index;
                             print("Released element at index " + release_point_index + ", swapping positions");
 
-                            //TODO: Check if hit_tile is on a viable lane (e.g. if swap is restricted on the same lanes as the grabbed element)
+                            //TODO HERE: Check if hit_tile is on a viable lane (e.g. if swap is restricted on the same lanes as the grabbed element)
 
-                            //TODO: Check if valid move (e.g. if swap allowed only when it results in a match; pre-check match)
+                            //TODO HERE: Check if valid move (e.g. if swap allowed only when it results in a match; pre-check match)
 
                             grid.SwapElements(selected_element_indices[0], release_point_index);
 
                             grid.MoveElementsToCorrectPositions(swap_movement_speed_increment_multiplier);
-
                             IncrementMoves();
                         }
                     }
                     else
                     {
                         print("Released element outside of the grid, resetting element position.");
-                        //grid.ResetElementWorldPos(selected_element_indices[0]);
 
                         grid.MoveElementsToCorrectPositions(swap_movement_speed_increment_multiplier);
                     }
@@ -175,7 +179,7 @@ public class InputManager : MonoBehaviour
                     if (hit_grid_index.x >= 0 && hit_grid_index.y >= 0)
                     {
                         selected_element_indices.Add(hit_grid_index);
-                        selected_element_type = grid.GetElementDataFromIndex(hit_grid_index).element_type;
+                        selected_element_type = grid.GetGridElementDataFromIndex(hit_grid_index).element_type;
                         print("Selected_element_type: " + selected_element_type + " at " + hit_grid_index);
                         if (selected_element_type != null)
                         {
@@ -207,7 +211,7 @@ public class InputManager : MonoBehaviour
                         {
                             if (!selected_element_indices.Contains(hit_grid_index))
                             {
-                                ElementType hit_element_type = grid.GetElementDataFromIndex(hit_grid_index).element_type;
+                                ElementType hit_element_type = grid.GetGridElementDataFromIndex(hit_grid_index).element_type;
 
                                 if (hit_element_type != null)
                                 {
@@ -261,6 +265,8 @@ public class InputManager : MonoBehaviour
                             {
                                 print("Finished with a valid selection, collecting selected elements");
                                 grid.RemoveElementsAtIndices(selected_element_indices);
+                                grid.FillGrid(new Vector2(0, -1f));
+                                grid.MoveElementsToCorrectPositions();
 
                                 //TODO: Implement and call a score pop up, which displays the amount of score gained
                                 int score_to_add = selected_element_indices.Count * selected_element_indices.Count;
@@ -284,21 +290,6 @@ public class InputManager : MonoBehaviour
 
             default:
                 break;
-        }
-
-        if (Input.GetMouseButtonDown(1))
-        {
-            Vector2 hit_grid_index = GetGridIndexUnderMousePos();
-            if (hit_grid_index.x >= 0 && hit_grid_index.y >= 0)
-            {
-                grid.GetNeighbouringIndices(hit_grid_index);
-            }
-        }
-
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            print("Space pressed.");
-            grid.RemoveMatches();
         }
     }
 
