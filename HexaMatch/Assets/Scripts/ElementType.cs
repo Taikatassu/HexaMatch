@@ -6,6 +6,7 @@ using UnityEngine;
 public class ElementType : ScriptableObject
 {
     public string element_name;
-    public GameObject element_prefab;
+    public string collection_effect_pool_tag;
+    public Material element_material;
     public ElementType[] matching_elements;
 }

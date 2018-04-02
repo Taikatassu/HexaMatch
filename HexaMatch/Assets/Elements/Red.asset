@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Name: Red
   m_EditorClassIdentifier: 
   element_name: Red
-  element_prefab: {fileID: 1872535058128402, guid: c8f545cfe724e6a4fb700e23dda93ca9,
-    type: 2}
+  collection_effect_pool_tag: RedElementCollectionEffect
+  element_material: {fileID: 2100000, guid: b2a71ccc260fab9428f6300383034751, type: 2}
   matching_elements:
   - {fileID: 11400000}

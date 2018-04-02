@@ -8,48 +8,47 @@ public class HexGrid : MonoBehaviour
 
     //TODO: Implement more effects, both visual and audio (match collection, points received, etc.)
 
-    //TODO: Implement area-highlight functionality (e.g. highlight all matching elements connected to the selected element) 
-
-    //TODO: Implement proper effect manager and relocate selection effect management to that script
-
-    //TODO: Modify elements to use the same prefab, just change the material / texture to match the correct element type
-    //          - Implement pooling for the element visuals
-
     //TODO: Correct grid start_pos calculations (7x6 grid is centered correctly, 6x5 is not?)
 
-    //TODO: Lock / ignore inputs during drop animations?
+    public delegate void ListListVector2(List<List<Vector2>> list_list_vec2);
+    public event ListListVector2 OnAutoMatchesFound;
 
     public Transform hex_base_prefab;
     public ElementType[] element_types;
-    public GameObject selection_effect_prefab;
-    public List<SelectionEffectInfo> selection_effect_infos;
 
-    public bool spawn_hex_bases;
+    public string grid_element_transform_pool_tag;
 
-    public int grid_width = 7;
+    public int grid_width = 6;
     public int grid_height = 6;
     public int min_viable_connection = 2;
     public int min_auto_match_connection = 10;
 
-    public float selection_effect_y_pos = -0.1f;
-    public float hex_base_y_pos = -0.25f;
-    public float gap = 0.0f;
+    public float gap = 0.1f;
+    public float min_new_element_spawn_height = 2f;
 
+    public bool spawn_hex_bases = true;
+    public bool offset_individual_spawns = true;
+
+    private float hex_base_y_pos = -0.25f;
     private float hex_width = 1f;
     private float hex_height = 0.866f;
     private float element_width = 0.725f;
     private float spawn_offset_per_row = 1.25f;
     private float spawn_offset_per_count = 0.05f;
 
-    private bool offset_individual_spawns = true;
+    private bool is_element_movement_done = true;
 
-    private Vector3 start_pos;
-    private Coroutine element_movement;
     private GridElementData[,] grid_elements;
+    private PoolManager pool_manager;
+    private EffectManager effect_manager;
+
+    private Coroutine element_movement;
+    private Vector3 start_pos;
 
     private void Start()
     {
-        selection_effect_infos = new List<SelectionEffectInfo>();
+        pool_manager = GetComponent<PoolManager>();
+        effect_manager = GetComponent<EffectManager>();
 
         AddGap();
         CalculateStartPos();
@@ -77,6 +76,8 @@ public class HexGrid : MonoBehaviour
 
     private void CreateGrid()
     {
+        is_element_movement_done = false;
+
         if (spawn_hex_bases)
         {
             CreateGridBase();
@@ -119,10 +120,12 @@ public class HexGrid : MonoBehaviour
 
     private void CreateNewGridElement(ElementType element_type, Vector3 spawn_pos, Vector2 grid_index, Transform parent)
     {
-        Transform element = Instantiate(element_type.element_prefab).transform;
-        element.position = spawn_pos;
-        element.parent = parent;
-        grid_elements[(int)grid_index.x, (int)grid_index.y] = new GridElementData(element_type, element, CalculateWorldPos(grid_index));
+        GameObject element = pool_manager.SpawnFromPool(grid_element_transform_pool_tag); //Instantiate(element_type.element_prefab).transform;
+        element.GetComponentInChildren<Renderer>().material = element_type.element_material;
+        element.transform.position = spawn_pos;
+        element.transform.parent = parent;
+        element.SetActive(true);
+        grid_elements[(int)grid_index.x, (int)grid_index.y] = new GridElementData(element_type, element.transform, CalculateWorldPos(grid_index));
     }
 
     private ElementType ChooseRandomElementType()
@@ -130,9 +133,9 @@ public class HexGrid : MonoBehaviour
         return element_types[Random.Range(0, element_types.Length)];
     }
 
-    private List<Vector2> FindMatchesOnGrid(int min_neighbour_count, ElementType element_type)
+    private List<List<Vector2>> FindMatchesOfElementType(ElementType element_type)
     {
-        List<Vector2> all_matching_element_indices = new List<Vector2>();
+        List<List<Vector2>> all_matching_element_indices = new List<List<Vector2>>();
         List<Vector2> indices_already_checked = new List<Vector2>();
 
         //Loop through grid elements
@@ -185,7 +188,7 @@ public class HexGrid : MonoBehaviour
                     if (matching_neighbours.Count >= min_auto_match_connection)
                     {
                         //print("Connected matches of index " + x + "|" + y + " checked, adding " + matching_neighbours.Count + " indices to the match list.");
-                        all_matching_element_indices.AddRange(matching_neighbours);
+                        all_matching_element_indices.Add(matching_neighbours);
                     }
                     //else
                     //{
@@ -236,6 +239,7 @@ public class HexGrid : MonoBehaviour
                     spawn_pos_offset *= (1 + (spawn_offset_per_count * spawn_count));
                 }
 
+                spawn_pos_offset.z += min_new_element_spawn_height;
                 Vector3 spawn_pos = CalculateWorldPos(new Vector2(x, y)) + spawn_pos_offset;
 
                 grid_elements[x, y].element_transform.position = spawn_pos;
@@ -246,26 +250,30 @@ public class HexGrid : MonoBehaviour
 
     private void ClearGridOfAutoMatches()
     {
-        while (RemoveMatches() > 0)
+        while (RemoveExistingMatches(true, false) > 0)
         {
-            print("Found and removed auto-matches; filling grid and redoing.");
+            //print("Found and removed auto-matches; filling grid and redoing.");
             FillGrid(new Vector2(0, -1f));
         }
     }
 
     private void ElementMovementFinished()
     {
-        if (RemoveMatches() > 0)
+        if (RemoveExistingMatches() > 0)
         {
-            print("Removed more matches; filling grid and starting drop animations again.");
+            //print("Removed more matches; filling grid and starting drop animations again.");
             FillGrid(new Vector2(0, -1f));
             MoveElementsToCorrectPositions();
+        }
+        else
+        {
+            is_element_movement_done = true;
         }
     }
 
     private IEnumerator MoveAllElementsTowardsCorrectWorldPositions(float movement_speed_increment_multiplier = 1f)
     {
-        print("Starting drop 'animations'.");
+        //print("Starting drop 'animations'.");
         float movement_speed = 0f;
         float movement_speed_increment_per_second = 25f;
 
@@ -314,18 +322,60 @@ public class HexGrid : MonoBehaviour
             yield return new WaitForEndOfFrame();
         }
 
-        print("Finished drop 'animations'.");
+        //print("Finished drop 'animations'.");
         ElementMovementFinished();
     }
 
     public void MoveElementsToCorrectPositions(float movement_speed_increment_multiplier = 1f)
     {
+        is_element_movement_done = false;
+
         if (element_movement != null)
         {
             StopCoroutine(element_movement);
         }
 
         element_movement = StartCoroutine(MoveAllElementsTowardsCorrectWorldPositions(movement_speed_increment_multiplier));
+    }
+
+    public bool GetIsElementMovementDone()
+    {
+        return is_element_movement_done;
+    }
+
+    public List<Vector2> FindMatchesForIndex(Vector2 grid_index)
+    {
+        ElementType element_type = grid_elements[(int)grid_index.x, (int)grid_index.y].element_type;
+
+        //Store the matching neighbours on a one list
+        List<Vector2> matching_neighbours = new List<Vector2>();
+        //And the matching neighbours whose neighbours we have yet to check, on another list
+        List<Vector2> matching_neighbours_to_check = new List<Vector2>();
+        //Add the current element as the first item on both lists
+        matching_neighbours.Add(grid_index);
+        matching_neighbours_to_check.Add(grid_index);
+
+        //Check neighbours of all the neighbouring matches, until no unchecked matching neighbours are left
+        while (matching_neighbours_to_check.Count > 0)
+        {
+            List<Vector2> neighbouring_indices = GetNeighbouringIndices(matching_neighbours_to_check[0]);
+
+            for (int i = 0; i < neighbouring_indices.Count; i++)
+            {
+                if (IsOfMatchingElementType(element_type, grid_elements[(int)neighbouring_indices[i].x, (int)neighbouring_indices[i].y].element_type))
+                {
+                    if (!matching_neighbours.Contains(neighbouring_indices[i]))
+                    {
+                        matching_neighbours.Add(neighbouring_indices[i]);
+                        matching_neighbours_to_check.Add(neighbouring_indices[i]);
+                    }
+                }
+            }
+
+            matching_neighbours_to_check.RemoveAt(0);
+        }
+
+        return matching_neighbours;
     }
 
     public void SwapElements(Vector2 a_index, Vector2 b_index)
@@ -395,34 +445,7 @@ public class HexGrid : MonoBehaviour
 
         return new Vector2(-1f, -1f);
     }
-
-    /* - Currently obsolete functions - 
-    public GridElementData GetGridElementDataFromWorldPosition(Vector3 world_pos)
-    {
-        for (int x = 0; x < grid_elements.GetLength(0); x++)
-        {
-            for (int y = 0; y < grid_elements.GetLength(1); y++)
-            {
-                Vector3 grid_world_pos = grid_elements[x, y].correct_world_pos;
-                float half_hex_height = (hex_height - gap) / 2;
-                float x_min = grid_world_pos.x - half_hex_height;
-                float x_max = grid_world_pos.x + half_hex_height;
-                float z_min = grid_world_pos.z - half_hex_height;
-                float z_max = grid_world_pos.z + half_hex_height;
-
-                if (world_pos.x >= x_min && world_pos.x <= x_max && world_pos.z >= z_min && world_pos.z <= z_max)
-                {
-                    print("Matching grid index found: " + x + "|" + y);
-                    return grid_elements[x, y];
-                }
-            }
-        }
-
-        print("Position is outside of the grid.");
-        return new GridElementData();
-    }
-    */
-
+    
     public GridElementData GetGridElementDataFromIndex(Vector2 grid_index)
     {
         return grid_elements[(int)grid_index.x, (int)grid_index.y];
@@ -489,38 +512,52 @@ public class HexGrid : MonoBehaviour
         return false;
     }
 
-    public int RemoveMatches()
+    public int RemoveExistingMatches(bool ignore_callback_event = false, bool spawn_collection_effects = true)
     {
-        List<Vector2> match_indices = new List<Vector2>();
+        List<List<Vector2>> match_indices = new List<List<Vector2>>();
         for (int i = 0; i < element_types.Length; i++)
         {
-            match_indices.AddRange(FindMatchesOnGrid(min_auto_match_connection, element_types[i]));
+            match_indices.AddRange(FindMatchesOfElementType(element_types[i]));
         }
 
-        RemoveElementsAtIndices(match_indices);
-        print("Removed " + match_indices.Count + " elements due to auto-matching.");
+        if (!ignore_callback_event && OnAutoMatchesFound != null)
+            OnAutoMatchesFound(match_indices);
+
+        int removed_elements_count = 0;
+        for (int j = 0; j < match_indices.Count; j++)
+        {
+            RemoveElementsAtIndices(match_indices[j], spawn_collection_effects);
+            removed_elements_count += match_indices[j].Count;
+        }
+        //print("Removed " + removed_elements_count + " elements due to auto-matching.");
+
         return match_indices.Count;
     }
 
-    public void RemoveElementAtIndex(Vector2 grid_index, bool destroy_attached_transform = true)
+    public void RemoveElementAtIndex(Vector2 grid_index, bool disable_element_transform = true, bool spawn_collection_effect = true)
     {
         int x = (int)grid_index.x;
         int y = (int)grid_index.y;
 
-        if (destroy_attached_transform)
+        if (spawn_collection_effect)
         {
-            Destroy(grid_elements[x, y].element_transform.gameObject);
+            effect_manager.SpawnCollectionEffectOnIndex(grid_index);
+        }
+
+        if (disable_element_transform)
+        {
+            grid_elements[x, y].element_transform.gameObject.SetActive(false);
         }
 
         grid_elements[x, y].element_transform = null;
         grid_elements[x, y].element_type = null;
     }
 
-    public void RemoveElementsAtIndices(List<Vector2> grid_indices)
+    public void RemoveElementsAtIndices(List<Vector2> grid_indices, bool spawn_collection_effects = true)
     {
         for (int i = 0; i < grid_indices.Count; i++)
         {
-            RemoveElementAtIndex(grid_indices[i]);
+            RemoveElementAtIndex(grid_indices[i], spawn_collection_effect: spawn_collection_effects);
         }
     }
 
@@ -530,7 +567,7 @@ public class HexGrid : MonoBehaviour
         {
             for (int y = 0; y < grid_elements.GetLength(1); y++)
             {
-                Destroy(grid_elements[x, y].element_transform.gameObject);
+                grid_elements[x, y].element_transform.gameObject.SetActive(false);
             }
         }
 
@@ -584,7 +621,7 @@ public class HexGrid : MonoBehaviour
                             {
                                 grid_elements[x, y] = grid_element;
                                 grid_elements[x, y].correct_world_pos = correct_world_pos;
-                                RemoveElementAtIndex(descending_element_index, false);
+                                RemoveElementAtIndex(descending_element_index, false, false);
                                 //print("Dropped an element from " + descending_element_index + " to fill an empty index at " + x + "|" + y);
                                 continue;
                             }
@@ -610,15 +647,16 @@ public class HexGrid : MonoBehaviour
                         Vector3 spawn_pos_offset = -fall_direction_3d_normalized * hex_height
                             * (number_of_newly_spawned_elements_under_this_one + 1);
 
-                        if (offset_individual_spawns)
-                        {
-                            spawn_pos_offset *= (1 + (spawn_offset_per_count * spawn_count)); //+= spawn_pos_offset
-                        }
+                        //if (offset_individual_spawns)
+                        //{
+                        //    spawn_pos_offset *= (1 + (spawn_offset_per_count * spawn_count)); //+= spawn_pos_offset
+                        //}
                         if (!full_spawn)
                         {
                             spawn_pos_offset *= Mathf.Pow(spawn_offset_per_row, number_of_newly_spawned_elements_under_this_one + 1);
                         }
 
+                        spawn_pos_offset.z += min_new_element_spawn_height;
                         descending_element_world_pos = correct_world_pos + spawn_pos_offset;
 
                         //print("FillGrid: Creating new element at " + x + "|" + y + ", spawn_pos: " + descending_element_world_pos 
@@ -634,46 +672,10 @@ public class HexGrid : MonoBehaviour
 
     public void Restart()
     {
+        is_element_movement_done = false;
+
         RemoveAllElements();
         InitializeGridElements();
-    }
-
-    public void SpawnSelectionEffectAtIndex(Vector2 grid_index)
-    {
-        //TODO: Pool management
-
-        Vector3 spawn_pos = GetGridElementDataFromIndex(grid_index).correct_world_pos;
-        spawn_pos.y = selection_effect_y_pos;
-        GameObject new_effect = Instantiate(selection_effect_prefab);
-        new_effect.transform.position = spawn_pos;
-        new_effect.transform.SetParent(GetGridElementDataFromIndex(grid_index).element_transform);
-
-        selection_effect_infos.Add(new SelectionEffectInfo(grid_index, new_effect));
-    }
-
-    public void ClearSelectionEffectAtIndex(Vector2 grid_index)
-    {
-        for (int i = 0; i < selection_effect_infos.Count; i++)
-        {
-            if (selection_effect_infos[i].grid_index == grid_index)
-            {
-                if (selection_effect_infos[i].selection_effect != null)
-                    Destroy(selection_effect_infos[i].selection_effect);
-                selection_effect_infos.RemoveAt(i);
-                //print("Removed selection effect at index: " + grid_index);
-                break;
-            }
-        }
-    }
-
-    public void ClearAllSelectionEffects()
-    {
-        while (selection_effect_infos.Count > 0)
-        {
-            if (selection_effect_infos[0].selection_effect != null)
-                Destroy(selection_effect_infos[0].selection_effect);
-            selection_effect_infos.RemoveAt(0);
-        }
     }
 }
 
@@ -693,14 +695,3 @@ public struct GridElementData
     }
 }
 
-public struct SelectionEffectInfo
-{
-    public Vector2 grid_index;
-    public GameObject selection_effect;
-
-    public SelectionEffectInfo(Vector2 _grid_index, GameObject _selection_effect)
-    {
-        grid_index = _grid_index;
-        selection_effect = _selection_effect;
-    }
-}

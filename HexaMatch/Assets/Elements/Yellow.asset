@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Name: Yellow
   m_EditorClassIdentifier: 
   element_name: Yellow
-  element_prefab: {fileID: 1494973181563778, guid: b412b77cf33740545b7fc190d0d926af,
-    type: 2}
+  collection_effect_pool_tag: YellowElementCollectionEffect
+  element_material: {fileID: 2100000, guid: 19aa54acb38524a4dbb35d06053889b8, type: 2}
   matching_elements:
   - {fileID: 11400000}

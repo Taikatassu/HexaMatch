@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Name: Blue
   m_EditorClassIdentifier: 
   element_name: Blue
-  element_prefab: {fileID: 1976919045176102, guid: f9dd8164c13c14441a1ebdda46c522f3,
-    type: 2}
+  collection_effect_pool_tag: BlueElementCollectionEffect
+  element_material: {fileID: 2100000, guid: 456596fafc7d7044a9319bc806143ea9, type: 2}
   matching_elements:
   - {fileID: 11400000}

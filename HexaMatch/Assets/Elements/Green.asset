@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Name: Green
   m_EditorClassIdentifier: 
   element_name: Green
-  element_prefab: {fileID: 1361637835654720, guid: f46d27d5b6b8fca439f07a29eb13a761,
-    type: 2}
+  collection_effect_pool_tag: GreenElementCollectionEffect
+  element_material: {fileID: 2100000, guid: 3d2d0614796611c4eb375ce9ad1ba0ff, type: 2}
   matching_elements:
   - {fileID: 11400000}
