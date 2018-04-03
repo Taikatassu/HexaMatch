@@ -1,16 +1,23 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class EffectManager : MonoBehaviour
 {
+    public delegate void IntVoid(int integer);
+    public event IntVoid OnPointPopupEffectFinished;
+
     public Material valid_selection_material;
     public Material invalid_selection_material;
 
     public Color non_highlighted_element_color;
     public Color default_element_color;
 
+    public Transform point_popup_destination;
+
     public string selection_effect_pool_tag;
+    public string point_popup_pool_tag;
 
     public bool display_connected_matches_highlight = true;
 
@@ -18,6 +25,7 @@ public class EffectManager : MonoBehaviour
     private HexGrid grid;
     private LineRenderer selection_line;
 
+    private List<Transform> active_point_popups;
     private List<SelectionEffectInfo> selection_effect_infos;
     private Queue<float> collection_effect_spawn_times;
     private Queue<GameObject> active_collection_effects;
@@ -26,6 +34,7 @@ public class EffectManager : MonoBehaviour
     private float selection_line_height = 1f;
     private float collection_effect_y_pos = 0.1f;
     private float collection_effect_lifetime = 1f;
+    private float point_popup_movement_speed = 800f;
 
     private void Start()
     {
@@ -33,11 +42,12 @@ public class EffectManager : MonoBehaviour
         grid = GetComponent<HexGrid>();
         selection_line = GetComponent<LineRenderer>();
 
+        active_point_popups = new List<Transform>();
         selection_effect_infos = new List<SelectionEffectInfo>();
-        ClearSelectionLine();
-
         collection_effect_spawn_times = new Queue<float>();
         active_collection_effects = new Queue<GameObject>();
+
+        ClearSelectionLine();
     }
 
     private void Update()
@@ -48,13 +58,46 @@ public class EffectManager : MonoBehaviour
             while (collection_effect_spawn_times.Count > 0 && Time.time >= collection_effect_spawn_times.Peek() + collection_effect_lifetime)
             {
                 collection_effect_spawn_times.Dequeue();
-                GameObject finished_effect = active_collection_effects.Dequeue();
-                finished_effect.SetActive(false);
+                active_collection_effects.Dequeue().SetActive(false);
                 //effects_disabled++;
             }
 
             //if (effects_disabled > 0)
             //    print("Disabled " + effects_disabled + " finished effects.");
+        }
+
+        if (active_point_popups.Count > 0)
+        {
+            for (int i = 0; i < active_point_popups.Count; i++)
+            {
+                if (active_point_popups[i].position == point_popup_destination.position)
+                {
+                    //TOOD: Spawn sparkle (or other suitable) small effect here
+
+                    if (OnPointPopupEffectFinished != null)
+                    {
+                        OnPointPopupEffectFinished(int.Parse(active_point_popups[i].GetComponentInChildren<Text>().text));
+                    }
+
+                    active_point_popups[i].gameObject.SetActive(false);
+                    active_point_popups.RemoveAt(i);
+                    i--;
+
+                    continue;
+                }
+
+                Vector3 direction_to_destination = point_popup_destination.position - active_point_popups[i].position;
+                float distance_to_destination = direction_to_destination.magnitude;
+
+                if (distance_to_destination <= point_popup_movement_speed * Time.deltaTime)
+                {
+                    active_point_popups[i].position = point_popup_destination.position;
+                }
+                else
+                {
+                    active_point_popups[i].position += direction_to_destination / distance_to_destination * point_popup_movement_speed * Time.deltaTime;
+                }
+            }
         }
     }
 
@@ -99,6 +142,8 @@ public class EffectManager : MonoBehaviour
             }
             selection_effect_infos.RemoveAt(0);
         }
+
+        selection_effect_infos = new List<SelectionEffectInfo>();
     }
 
     public void StartSelectionLine(Vector2 start_index)
@@ -191,6 +236,44 @@ public class EffectManager : MonoBehaviour
         active_collection_effects.Enqueue(effect);
         effect.SetActive(true);
         effect.GetComponent<ParticleSystem>().Play(true);
+    }
+
+    public void SpawnPointPopUpsForMatch(List<Vector2> match_element_indices)
+    {
+        //print("match_element_indices.Count: " + match_element_indices.Count);
+        int element_count = match_element_indices.Count;
+        for (int i = 0; i < element_count; i++)
+        {
+            GameObject new_point_popup = pool_manager.SpawnFromPool(point_popup_pool_tag);
+            new_point_popup.GetComponentInChildren<Text>().text = element_count.ToString();
+            new_point_popup.transform.position = Camera.main.WorldToScreenPoint(grid.GetGridElementDataFromIndex(match_element_indices[i]).correct_world_pos);
+            new_point_popup.SetActive(true);
+            active_point_popups.Add(new_point_popup.transform);
+        }
+    }
+
+    public void Restart()
+    {
+        //Reset and clear collection effects
+        while(active_collection_effects.Count > 0)
+        {
+            active_collection_effects.Dequeue().SetActive(false);
+        }
+
+        collection_effect_spawn_times = new Queue<float>();
+        active_collection_effects = new Queue<GameObject>();
+
+        //Reset and clear point popup effects
+        for (int i = 0; i < active_point_popups.Count; i++)
+        {
+            active_point_popups[i].gameObject.SetActive(false);
+        }
+
+        active_point_popups = new List<Transform>();
+
+        ClearSelectionLine();
+        ClearAllSelectionEffects();
+        ClearHighlights();
     }
 }
 

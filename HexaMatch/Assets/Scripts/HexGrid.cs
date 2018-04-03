@@ -6,8 +6,6 @@ public class HexGrid : MonoBehaviour
 {
     // Original source: https://www.youtube.com/watch?v=konL0iB5gPI
 
-    //TODO: Implement more effects, both visual and audio (match collection, points received, etc.)
-
     //TODO: Correct grid start_pos calculations (7x6 grid is centered correctly, 6x5 is not?)
 
     public delegate void ListListVector2(List<List<Vector2>> list_list_vec2);

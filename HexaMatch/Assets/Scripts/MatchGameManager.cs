@@ -10,6 +10,10 @@ public class MatchGameManager : MonoBehaviour
     //TODO: Check if hit_tile is on a viable lane (e.g. if swap is restricted on the same lanes as the grabbed element)
     //TODO: Check if valid move (e.g. if swap allowed only when it results in a match; pre-check match)
 
+    //TODO: Create easily modifiable implementation of match points calculation, and have it in only one place
+    //          - Currently both this script and effect manager (for points popups) calculate the points separately
+    //          - Current formula: matched element count ^ 2
+
     public enum ESelectionMode
     {
         SWAP,
@@ -32,6 +36,7 @@ public class MatchGameManager : MonoBehaviour
     
     private float element_max_y_pos_during_swap_grab = 4f;
     private float swap_movement_speed_increment_multiplier = 8f;
+    private int score_should_be = 0;
     private int score = 0;
     private int moves = 0;
     private bool invalid_selection = false;
@@ -48,6 +53,9 @@ public class MatchGameManager : MonoBehaviour
 
         grid.OnAutoMatchesFound -= AutoMatchCallback;
         grid.OnAutoMatchesFound += AutoMatchCallback;
+
+        effect_manager.OnPointPopupEffectFinished -= PointPopupEffectFinishCallback;
+        effect_manager.OnPointPopupEffectFinished += PointPopupEffectFinishCallback;
 
         ResetCounters();
     }
@@ -272,14 +280,15 @@ public class MatchGameManager : MonoBehaviour
                             if (selected_element_indices.Count >= grid.min_viable_connection)
                             {
                                 //print("Finished with a valid selection, collecting selected elements");
+                                effect_manager.SpawnPointPopUpsForMatch(selected_element_indices);
+                                //int score_to_add = selected_element_indices.Count * selected_element_indices.Count;
+                                //AddToScore(score_to_add);
+                                score_should_be += selected_element_indices.Count * selected_element_indices.Count;
+                                IncrementMoves();
+
                                 grid.RemoveElementsAtIndices(selected_element_indices);
                                 grid.FillGrid(new Vector2(0, -1f));
                                 grid.MoveElementsToCorrectPositions();
-
-                                //TODO: Implement and call a score pop up, which displays the amount of score gained
-                                int score_to_add = selected_element_indices.Count * selected_element_indices.Count;
-                                AddToScore(score_to_add);
-                                IncrementMoves();
                             }
                             //else
                             //{
@@ -331,12 +340,14 @@ public class MatchGameManager : MonoBehaviour
     {
         //print("Restart button pressed");
 
-        ResetCounters();
         grid.Restart();
+        effect_manager.Restart();
+        ResetCounters();
     }
 
     private void ResetCounters()
     {
+        score_should_be = 0;
         score = 0;
         score_text.text = "SCORE: " + score.ToString();
         moves = 0;
@@ -347,6 +358,7 @@ public class MatchGameManager : MonoBehaviour
     {
         score += score_to_add;
         score_text.text = "SCORE: " + score.ToString();
+        //print("Score should be: " + score_should_be);
     }
 
     private void IncrementMoves()
@@ -368,10 +380,17 @@ public class MatchGameManager : MonoBehaviour
             //print("Gained score from auto-match: " + score_from_match);
 
             //TODO: Call effects
+            effect_manager.SpawnPointPopUpsForMatch(matches[i]);
 
         }
 
-        AddToScore(score_to_add);
+        //AddToScore(score_to_add);
+        score_should_be += score_to_add;
+    }
+
+    public void PointPopupEffectFinishCallback(int points_to_add)
+    {
+        AddToScore(points_to_add);
     }
 
 }
