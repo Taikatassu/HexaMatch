@@ -30,8 +30,8 @@ public class MatchGameManager : MonoBehaviour
     private EffectManager effect_manager;
     private ElementType selected_element_type;
     private Transform selected_element_transform;
-    private List<Vector2> selected_element_indices;
-    private Vector2 last_grid_index_to_mouse_over;
+    private List<IntVector2> selected_element_indices;
+    private IntVector2 last_grid_index_to_mouse_over;
     private Vector3 last_mouse_pos;
     
     private float element_max_y_pos_during_swap_grab = 4f;
@@ -45,9 +45,9 @@ public class MatchGameManager : MonoBehaviour
     {
         grid = GetComponent<HexGrid>();
         effect_manager = GetComponent<EffectManager>();
-        selected_element_indices = new List<Vector2>();
-        last_grid_index_to_mouse_over = new Vector3(-1f, -1f);
-        last_mouse_pos = Vector2.zero;
+        selected_element_indices = new List<IntVector2>();
+        last_grid_index_to_mouse_over = new IntVector2(-1, -1);
+        last_mouse_pos = Vector3.zero;
 
         restart_button.onClick.AddListener(OnRestartButtonPressed);
 
@@ -69,10 +69,10 @@ public class MatchGameManager : MonoBehaviour
                 #region LeftMouseButton Down
                 if (Input.GetMouseButtonDown(0) && grid.GetIsElementMovementDone())
                 {
-                    Vector2 hit_grid_index = GetGridIndexUnderMousePos();
+                    IntVector2 hit_grid_index = GetGridIndexUnderMousePos();
                     if (hit_grid_index.x >= 0 && hit_grid_index.y >= 0)
                     {
-                        selected_element_indices = new List<Vector2>();
+                        selected_element_indices = new List<IntVector2>();
                         selected_element_indices.Add(hit_grid_index);
                         GridElementData element_data = grid.GetGridElementDataFromIndex(selected_element_indices[0]);
                         selected_element_type = element_data.element_type;
@@ -105,7 +105,7 @@ public class MatchGameManager : MonoBehaviour
                 {
                     if (last_mouse_pos != Input.mousePosition)
                     {
-                        Vector2 hit_grid_index = GetGridIndexUnderMousePos();
+                        IntVector2 hit_grid_index = GetGridIndexUnderMousePos();
                         if (last_grid_index_to_mouse_over != hit_grid_index)
                         {
                             if (hit_grid_index.x >= 0 && hit_grid_index.y >= 0)
@@ -134,7 +134,7 @@ public class MatchGameManager : MonoBehaviour
                 #region LeftMouseButton Up
                 if (Input.GetMouseButtonUp(0) && selected_element_transform != null)
                 {
-                    Vector2 hit_grid_index = GetGridIndexUnderMousePos();
+                    IntVector2 hit_grid_index = GetGridIndexUnderMousePos();
                     if (hit_grid_index.x >= 0 && hit_grid_index.y >= 0)
                     {
                         if (selected_element_indices.Contains(hit_grid_index))
@@ -145,7 +145,7 @@ public class MatchGameManager : MonoBehaviour
                         }
                         else
                         {
-                            Vector2 release_point_index = hit_grid_index;
+                            IntVector2 release_point_index = hit_grid_index;
                             //print("Released element at index " + release_point_index + ", swapping positions");
 
                             //TODO HERE: Check if hit_tile is on a viable lane (e.g. if swap is restricted on the same lanes as the grabbed element)
@@ -174,10 +174,10 @@ public class MatchGameManager : MonoBehaviour
                 if (selected_element_transform != null)
                 {
                     Vector3 mouse_position = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-                    mouse_position.y = 0;
-                    if (mouse_position.z > element_max_y_pos_during_swap_grab)
-                        mouse_position.z = element_max_y_pos_during_swap_grab;
-
+                    mouse_position.z = 0;
+                    if (mouse_position.y > element_max_y_pos_during_swap_grab)
+                        mouse_position.y = element_max_y_pos_during_swap_grab;
+                    
                     selected_element_transform.position = mouse_position;
                 }
                 #endregion
@@ -188,9 +188,9 @@ public class MatchGameManager : MonoBehaviour
                 #region LeftMouseButton Down
                 if (Input.GetMouseButtonDown(0) && grid.GetIsElementMovementDone())
                 {
-                    selected_element_indices = new List<Vector2>();
+                    selected_element_indices = new List<IntVector2>();
 
-                    Vector2 hit_grid_index = GetGridIndexUnderMousePos();
+                    IntVector2 hit_grid_index = GetGridIndexUnderMousePos();
                     if (hit_grid_index.x >= 0 && hit_grid_index.y >= 0)
                     {
                         selected_element_indices.Add(hit_grid_index);
@@ -201,8 +201,7 @@ public class MatchGameManager : MonoBehaviour
                             invalid_selection = false;
                             effect_manager.StartSelectionLine(hit_grid_index);
                             effect_manager.SpawnSelectionEffectAtIndex(hit_grid_index);
-
-                            //TODO: Highlight neighbouring elements of the matching type
+                            
                             effect_manager.HighlightIndices(grid.FindMatchesForIndex(hit_grid_index));
 
                         }
@@ -224,7 +223,7 @@ public class MatchGameManager : MonoBehaviour
                 {
                     if (last_mouse_pos != Input.mousePosition)
                     {
-                        Vector2 hit_grid_index = GetGridIndexUnderMousePos();
+                        IntVector2 hit_grid_index = GetGridIndexUnderMousePos();
                         if (hit_grid_index.x >= 0 && hit_grid_index.y >= 0)
                         {
                             if (!selected_element_indices.Contains(hit_grid_index))
@@ -287,7 +286,7 @@ public class MatchGameManager : MonoBehaviour
                                 IncrementMoves();
 
                                 grid.RemoveElementsAtIndices(selected_element_indices);
-                                grid.FillGrid(new Vector2(0, -1f));
+                                grid.FillGrid();
                                 grid.MoveElementsToCorrectPositions();
                             }
                             //else
@@ -316,17 +315,9 @@ public class MatchGameManager : MonoBehaviour
         }
     }
 
-    private Vector2 GetGridIndexUnderMousePos()
+    private IntVector2 GetGridIndexUnderMousePos()
     {
-        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        Debug.DrawRay(ray.origin, ray.direction * 50f, Color.red, 0.5f);
-        RaycastHit hit;
-        if (Physics.Raycast(ray, out hit))
-        {
-            return grid.GetGridIndexFromWorldPosition(hit.point, true);
-        }
-
-        return new Vector2(-1f, -1f);
+        return grid.GetGridIndexFromWorldPosition(Camera.main.ScreenToWorldPoint(Input.mousePosition));
     }
 
     private void InvalidateSelection()
@@ -367,7 +358,7 @@ public class MatchGameManager : MonoBehaviour
         moves_text.text = "MOVES: " + moves.ToString();
     }
 
-    public void AutoMatchCallback(List<List<Vector2>> matches)
+    public void AutoMatchCallback(List<List<IntVector2>> matches)
     {
         int score_to_add = 0;
         for (int i = 0; i < matches.Count; i++)
@@ -379,7 +370,7 @@ public class MatchGameManager : MonoBehaviour
             score_to_add += score_from_match;
             //print("Gained score from auto-match: " + score_from_match);
 
-            //TODO: Call effects
+            //Call effects
             effect_manager.SpawnPointPopUpsForMatch(matches[i]);
 
         }
