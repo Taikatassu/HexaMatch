@@ -34,8 +34,8 @@ public class HexGrid : MonoBehaviour
     private Coroutine element_movement;
     private Vector3 start_pos;
     private Vector3 fall_direction = Vector3.down; //TODO: Currently changing fall direction causes in infinite loop resulting in a freeze
-                                                        //(So keep fall_direction as Vector3.down)
-                                                        //Fix if necessary
+                                                   //(So keep fall_direction as Vector3.down)
+                                                   //Fix if necessary
 
     private float hex_base_z_pos = 0.25f;
     private float hex_width = 1f;
@@ -50,7 +50,7 @@ public class HexGrid : MonoBehaviour
     {
         pool_manager = GetComponent<PoolManager>();
         effect_manager = GetComponent<EffectManager>();
-        
+
         fall_direction.Normalize();
         AddGap();
         CalculateStartPos();
@@ -105,7 +105,7 @@ public class HexGrid : MonoBehaviour
 
         FillGrid(true);
         ClearGridOfAutoMatches();
-        RecalculateSpawnPositions();;
+        RecalculateSpawnPositions(); ;
         MoveElementsToCorrectPositions();
     }
 
@@ -146,11 +146,8 @@ public class HexGrid : MonoBehaviour
         {
             for (int y = 0; y < grid_elements.GetLength(1); y++)
             {
-                if (indices_already_checked.Contains(new IntVector2(x, y)))
-                {
-                    //print("Skipping index already checked at " + x + "|" + y);
-                    continue;
-                }
+                if (grid_elements[x, y].flagged_for_removal_by_auto_match) continue;
+                if (indices_already_checked.Contains(new IntVector2(x, y))) continue;
 
                 //If the element is of matching type with the element to check against
                 if (IsOfMatchingElementType(element_type, grid_elements[x, y].element_type))
@@ -174,12 +171,15 @@ public class HexGrid : MonoBehaviour
 
                         for (int i = 0; i < neighbouring_indices.Count; i++)
                         {
+                            if (grid_elements[neighbouring_indices[i].x, neighbouring_indices[i].y].flagged_for_removal_by_auto_match) continue;
+
                             if (IsOfMatchingElementType(element_type, grid_elements[neighbouring_indices[i].x, neighbouring_indices[i].y].element_type))
                             {
                                 if (!matching_neighbours.Contains(neighbouring_indices[i]))
                                 {
                                     matching_neighbours.Add(neighbouring_indices[i]);
                                     matching_neighbours_to_check.Add(neighbouring_indices[i]);
+                                    grid_elements[neighbouring_indices[i].x, neighbouring_indices[i].y].flagged_for_removal_by_auto_match = true;
                                 }
                             }
                         }
@@ -493,6 +493,15 @@ public class HexGrid : MonoBehaviour
             match_indices.AddRange(FindMatchesOfElementType(element_types[i]));
         }
 
+        //Reset flagged_for_removal_by_auto_match flags
+        for (int x = 0; x < grid_elements.GetLength(0); x++)
+        {
+            for (int y = 0; y < grid_elements.GetLength(1); y++)
+            {
+                grid_elements[x, y].flagged_for_removal_by_auto_match = false;
+            }
+        }
+
         if (!ignore_callback_event && OnAutoMatchesFound != null)
             OnAutoMatchesFound(match_indices);
 
@@ -650,6 +659,7 @@ public struct GridElementData
     public Transform element_transform;
     public Vector3 correct_world_pos;
     public bool just_spawned;
+    public bool flagged_for_removal_by_auto_match;
 
     public GridElementData(ElementType _element_type, Transform _element_transform, Vector3 _correct_world_pos)
     {
@@ -657,6 +667,7 @@ public struct GridElementData
         element_transform = _element_transform;
         correct_world_pos = _correct_world_pos;
         just_spawned = true;
+        flagged_for_removal_by_auto_match = false;
     }
 }
 
