@@ -11,8 +11,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fa9d71019eb3d4847a749145c71cec98, type: 3}
   m_Name: Red
   m_EditorClassIdentifier: 
-  element_name: Red
-  collection_effect_pool_tag: RedElementCollectionEffect
-  element_material: {fileID: 2100000, guid: b2a71ccc260fab9428f6300383034751, type: 2}
-  matching_elements:
+  elementName: Red
+  collectionEffectPoolTag: RedElementCollectionEffectPool
+  elementMaterial: {fileID: 2100000, guid: b2a71ccc260fab9428f6300383034751, type: 2}
+  matchingElements:
   - {fileID: 11400000}

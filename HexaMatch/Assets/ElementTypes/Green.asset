@@ -11,8 +11,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fa9d71019eb3d4847a749145c71cec98, type: 3}
   m_Name: Green
   m_EditorClassIdentifier: 
-  element_name: Green
-  collection_effect_pool_tag: GreenElementCollectionEffect
-  element_material: {fileID: 2100000, guid: 3d2d0614796611c4eb375ce9ad1ba0ff, type: 2}
-  matching_elements:
+  elementName: Green
+  collectionEffectPoolTag: GreenElementCollectionEffectPool
+  elementMaterial: {fileID: 2100000, guid: 3d2d0614796611c4eb375ce9ad1ba0ff, type: 2}
+  matchingElements:
   - {fileID: 11400000}

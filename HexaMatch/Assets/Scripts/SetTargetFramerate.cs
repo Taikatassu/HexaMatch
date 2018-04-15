@@ -4,10 +4,10 @@ using UnityEngine;
 
 public class SetTargetFramerate : MonoBehaviour {
 
-    public int target_framerate = 60;
+    public int targetFramerate = 60;
 
     private void Start()
     {
-        Application.targetFrameRate = target_framerate;
+        Application.targetFrameRate = targetFramerate;
     }
 }

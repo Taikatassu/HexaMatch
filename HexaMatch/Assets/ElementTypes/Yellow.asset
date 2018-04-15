@@ -11,8 +11,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fa9d71019eb3d4847a749145c71cec98, type: 3}
   m_Name: Yellow
   m_EditorClassIdentifier: 
-  element_name: Yellow
-  collection_effect_pool_tag: YellowElementCollectionEffect
-  element_material: {fileID: 2100000, guid: 19aa54acb38524a4dbb35d06053889b8, type: 2}
-  matching_elements:
+  elementName: Yellow
+  collectionEffectPoolTag: YellowElementCollectionEffectPool
+  elementMaterial: {fileID: 2100000, guid: 19aa54acb38524a4dbb35d06053889b8, type: 2}
+  matchingElements:
   - {fileID: 11400000}

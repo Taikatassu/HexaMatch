@@ -415,22 +415,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 546b749dc3217304f887e728a9f79d4d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  hex_base_prefab: {fileID: 4227468934523398, guid: 9f38a4045117636489a819fccaa28c7f,
+  hexBasePrefab: {fileID: 4227468934523398, guid: 9f38a4045117636489a819fccaa28c7f,
     type: 2}
-  element_types:
+  elementTypes:
   - {fileID: 11400000, guid: 0afd4b8803c5f134da45fdffe87d7b85, type: 2}
   - {fileID: 11400000, guid: e2b05e40edfbfd5489aa529a3e3d2147, type: 2}
   - {fileID: 11400000, guid: 4ce0a17a32fad894c89e938255a8710c, type: 2}
   - {fileID: 11400000, guid: 1710d17428214174692211b05a777e5b, type: 2}
-  grid_element_transform_pool_tag: GridElementTransform
-  grid_width: 6
-  grid_height: 6
-  min_viable_connection: 2
-  min_auto_match_connection: 10
+  gridElementTransformPoolTag: GridElementTransformPool
+  gridWidth: 6
+  gridHeight: 6
+  minViableConnection: 2
+  minAutoMatchConnection: 10
   gap: 0.1
-  min_new_element_spawn_y_pos: 2
-  spawn_hex_bases: 1
-  offset_individual_spawns: 1
+  minNewElementSpawnYPos: 2
+  spawnHexBases: 1
+  offsetIndividualSpawns: 1
 --- !u!114 &1179769087
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -442,10 +442,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: caf43d7fb0fccfa4f990e57179fb01af, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  selection_mode: 1
-  restart_button: {fileID: 1782941428}
-  score_text: {fileID: 1564141471}
-  moves_text: {fileID: 1741767353}
+  selectionMode: 1
+  restartButton: {fileID: 1782941428}
+  scoreText: {fileID: 1564141471}
+  movesText: {fileID: 1741767353}
 --- !u!120 &1179769088
 LineRenderer:
   m_ObjectHideFlags: 0
@@ -543,7 +543,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e6ed8a70f1599de4ca3c09bd1ac08566, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  target_framerate: 60
+  targetFramerate: 60
 --- !u!114 &1179769091
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -555,30 +555,30 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a78ff3b1fc36fe242873f57035034e02, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  canvas_transform: {fileID: 2011371387}
+  canvasTransform: {fileID: 2011371387}
   pools:
-  - tag: GridElementTransform
+  - tag: GridElementTransformPool
     prefab: {fileID: 1194976374683992, guid: 1f7e3f49d04182b4abfee7d780ac94ac, type: 2}
-    min_size: 36
-  - tag: SelectionEffect
+    minSize: 42
+  - tag: SelectionEffectPool
     prefab: {fileID: 1275806307389382, guid: 2b0e477ee03eaf34ca799260a08ec142, type: 2}
-    min_size: 10
-  - tag: BlueElementCollectionEffect
+    minSize: 9
+  - tag: BlueElementCollectionEffectPool
     prefab: {fileID: 1223741225066076, guid: 7ffba8e075d9c744294e9b91f0e68c46, type: 2}
-    min_size: 36
-  - tag: GreenElementCollectionEffect
+    minSize: 10
+  - tag: GreenElementCollectionEffectPool
     prefab: {fileID: 1415973814466722, guid: f192fdae8c3b416439690e4650cdec9e, type: 2}
-    min_size: 36
-  - tag: RedElementCollectionEffect
+    minSize: 10
+  - tag: RedElementCollectionEffectPool
     prefab: {fileID: 1010525776106394, guid: 02daee198e1a54248b5631279785e088, type: 2}
-    min_size: 36
-  - tag: YellowElementCollectionEffect
+    minSize: 10
+  - tag: YellowElementCollectionEffectPool
     prefab: {fileID: 1362991110217054, guid: 78911adc4a9d4534b8bc25c29d433d56, type: 2}
-    min_size: 36
-  ui_object_pools:
-  - tag: UITextPopUp
+    minSize: 10
+  uiObjectPools:
+  - tag: ScorePopupPool
     prefab: {fileID: 1473503007290330, guid: 02d014f94a4a2fd4a95ca762dda650c7, type: 2}
-    min_size: 10
+    minSize: 20
 --- !u!114 &1179769092
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -590,16 +590,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b6314265e5f51cd48bd33162c80b0ffc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  valid_selection_material: {fileID: 2100000, guid: e74cc5a6fe900084892424f7afb2ec09,
+  validSelectionMaterial: {fileID: 2100000, guid: e74cc5a6fe900084892424f7afb2ec09,
     type: 2}
-  invalid_selection_material: {fileID: 2100000, guid: 8599cbee1bf2b354b96abb6f764fefd7,
+  invalidSelectionMaterial: {fileID: 2100000, guid: 8599cbee1bf2b354b96abb6f764fefd7,
     type: 2}
-  non_highlighted_element_color: {r: 0.6102941, g: 0.6102941, b: 0.6102941, a: 1}
-  default_element_color: {r: 1, g: 1, b: 1, a: 1}
-  point_popup_destination: {fileID: 278789689}
-  selection_effect_pool_tag: SelectionEffect
-  point_popup_pool_tag: UITextPopUp
-  display_connected_matches_highlight: 1
+  nonHighlightedElementColor: {r: 0.49264705, g: 0.49264705, b: 0.49264705, a: 1}
+  defaultElementColor: {r: 1, g: 1, b: 1, a: 1}
+  pointPopupDestination: {fileID: 278789689}
+  selectionEffectPoolTag: SelectionEffectPool
+  pointPopupPoolTag: ScorePopupPool
+  displayConnectedMatchesHighlight: 1
 --- !u!1 &1541085469
 GameObject:
   m_ObjectHideFlags: 0

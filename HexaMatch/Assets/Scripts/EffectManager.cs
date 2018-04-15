@@ -8,124 +8,124 @@ public class EffectManager : MonoBehaviour
     public delegate void IntVoid(int integer);
     public event IntVoid OnPointPopupEffectFinished;
 
-    public Material valid_selection_material;
-    public Material invalid_selection_material;
+    public Material validSelectionMaterial;
+    public Material invalidSelectionMaterial;
 
-    public Color non_highlighted_element_color;
-    public Color default_element_color;
+    public Color nonHighlightedElementColor;
+    public Color defaultElementColor;
 
-    public Transform point_popup_destination;
+    public Transform pointPopupDestination;
 
-    public string selection_effect_pool_tag;
-    public string point_popup_pool_tag;
+    public string selectionEffectPoolTag;
+    public string pointPopupPoolTag;
 
-    public bool display_connected_matches_highlight = true;
+    public bool displayConnectedMatchesHighlight = true;
 
-    private PoolManager pool_manager;
+    private PoolManager poolManager;
     private HexGrid grid;
-    private LineRenderer selection_line;
+    private LineRenderer selectionLine;
 
-    private List<Transform> active_point_popups;
-    private List<SelectionEffectInfo> selection_effect_infos;
-    private Queue<float> collection_effect_spawn_times;
-    private Queue<GameObject> active_collection_effects;
+    private List<Transform> activePointPopups;
+    private List<SelectionEffectInfo> selectionEffectInfos;
+    private Queue<float> collectionEffectSpawnTimes;
+    private Queue<GameObject> activeCollectionEffects;
 
-    private float selection_effect_z_pos = 0.1f;
-    private float selection_line_z_pos = -1f;
-    private float collection_effect_z_pos = -0.1f;
-    private float collection_effect_lifetime = 1f;
-    private float point_popup_movement_speed = 800f;
+    private float selectionEffectZPos = 0.1f;
+    private float selectionLineZPos = -1f;
+    private float collectionEffectZPos = -0.1f;
+    private float collectionEffectLifetime = 1f;
+    private float pointPopupMovementSpeed = 800f;
 
     private void Start()
     {
-        pool_manager = GetComponent<PoolManager>();
+        poolManager = GetComponent<PoolManager>();
         grid = GetComponent<HexGrid>();
-        selection_line = GetComponent<LineRenderer>();
+        selectionLine = GetComponent<LineRenderer>();
 
-        active_point_popups = new List<Transform>();
-        selection_effect_infos = new List<SelectionEffectInfo>();
-        collection_effect_spawn_times = new Queue<float>();
-        active_collection_effects = new Queue<GameObject>();
+        activePointPopups = new List<Transform>();
+        selectionEffectInfos = new List<SelectionEffectInfo>();
+        collectionEffectSpawnTimes = new Queue<float>();
+        activeCollectionEffects = new Queue<GameObject>();
 
         ClearSelectionLine();
     }
 
     private void Update()
     {
-        if (collection_effect_spawn_times.Count > 0)
+        if (collectionEffectSpawnTimes.Count > 0)
         {
-            //int effects_disabled = 0;
-            while (collection_effect_spawn_times.Count > 0 && Time.time >= collection_effect_spawn_times.Peek() + collection_effect_lifetime)
+            //int effectsDisabled = 0;
+            while (collectionEffectSpawnTimes.Count > 0 && Time.time >= collectionEffectSpawnTimes.Peek() + collectionEffectLifetime)
             {
-                collection_effect_spawn_times.Dequeue();
-                active_collection_effects.Dequeue().SetActive(false);
-                //effects_disabled++;
+                collectionEffectSpawnTimes.Dequeue();
+                activeCollectionEffects.Dequeue().SetActive(false);
+                //effectsDisabled++;
             }
 
-            //if (effects_disabled > 0)
-            //    print("Disabled " + effects_disabled + " finished effects.");
+            //if (effectsDisabled > 0)
+            //    print("Disabled " + effectsDisabled + " finished effects.");
         }
 
-        if (active_point_popups.Count > 0)
+        if (activePointPopups.Count > 0)
         {
-            for (int i = 0; i < active_point_popups.Count; i++)
+            for (int i = 0; i < activePointPopups.Count; i++)
             {
-                if (active_point_popups[i].position == point_popup_destination.position)
+                if (activePointPopups[i].position == pointPopupDestination.position)
                 {
                     //TOOD: Spawn sparkle (or other suitable) small effect here
 
                     if (OnPointPopupEffectFinished != null)
                     {
-                        OnPointPopupEffectFinished(int.Parse(active_point_popups[i].GetComponentInChildren<Text>().text));
+                        OnPointPopupEffectFinished(int.Parse(activePointPopups[i].GetComponentInChildren<Text>().text));
                     }
 
-                    active_point_popups[i].gameObject.SetActive(false);
-                    active_point_popups.RemoveAt(i);
+                    activePointPopups[i].gameObject.SetActive(false);
+                    activePointPopups.RemoveAt(i);
                     i--;
 
                     continue;
                 }
 
-                Vector3 direction_to_destination = point_popup_destination.position - active_point_popups[i].position;
-                float distance_to_destination = direction_to_destination.magnitude;
+                Vector3 directionToDestination = pointPopupDestination.position - activePointPopups[i].position;
+                float distanceToDestination = directionToDestination.magnitude;
 
-                if (distance_to_destination <= point_popup_movement_speed * Time.deltaTime)
+                if (distanceToDestination <= pointPopupMovementSpeed * Time.deltaTime)
                 {
-                    active_point_popups[i].position = point_popup_destination.position;
+                    activePointPopups[i].position = pointPopupDestination.position;
                 }
                 else
                 {
-                    active_point_popups[i].position += direction_to_destination / distance_to_destination * point_popup_movement_speed * Time.deltaTime;
+                    activePointPopups[i].position += directionToDestination / distanceToDestination * pointPopupMovementSpeed * Time.deltaTime;
                 }
             }
         }
     }
 
-    public void SpawnSelectionEffectAtIndex(IntVector2 grid_index)
+    public void SpawnSelectionEffectAtIndex(IntVector2 gridIndex)
     {
-        Vector3 spawn_pos = Vector3.zero;
-        spawn_pos.z = selection_effect_z_pos;
-        GameObject new_effect = pool_manager.SpawnFromPool(selection_effect_pool_tag);
-        new_effect.transform.SetParent(grid.GetGridElementDataFromIndex(grid_index).element_transform);
-        new_effect.transform.localPosition = spawn_pos;
-        new_effect.SetActive(true);
+        Vector3 spawnPosZ = Vector3.zero;
+        spawnPosZ.z = selectionEffectZPos;
+        GameObject newEffect = poolManager.SpawnFromPool(selectionEffectPoolTag);
+        newEffect.transform.SetParent(grid.GetGridElementDataFromIndex(gridIndex).elementTransform);
+        newEffect.transform.localPosition = spawnPosZ;
+        newEffect.SetActive(true);
 
-        selection_effect_infos.Add(new SelectionEffectInfo(grid_index, new_effect));
+        selectionEffectInfos.Add(new SelectionEffectInfo(gridIndex, newEffect));
     }
 
-    public void ClearSelectionEffectAtIndex(IntVector2 grid_index)
+    public void ClearSelectionEffectAtIndex(IntVector2 gridIndex)
     {
-        for (int i = 0; i < selection_effect_infos.Count; i++)
+        for (int i = 0; i < selectionEffectInfos.Count; i++)
         {
-            if (selection_effect_infos[i].grid_index == grid_index)
+            if (selectionEffectInfos[i].gridIndex == gridIndex)
             {
-                if (selection_effect_infos[i].selection_effect != null)
+                if (selectionEffectInfos[i].selectionEffect != null)
                 {
-                    selection_effect_infos[i].selection_effect.SetActive(false);
-                    selection_effect_infos[i].selection_effect.transform.SetParent(this.transform);
+                    selectionEffectInfos[i].selectionEffect.SetActive(false);
+                    selectionEffectInfos[i].selectionEffect.transform.SetParent(this.transform);
                 }
-                selection_effect_infos.RemoveAt(i);
-                //print("Removed selection effect at index: " + grid_index);
+                selectionEffectInfos.RemoveAt(i);
+                //print("Removed selection effect at index: " + gridIndex);
                 break;
             }
         }
@@ -133,79 +133,79 @@ public class EffectManager : MonoBehaviour
 
     public void ClearAllSelectionEffects()
     {
-        while (selection_effect_infos.Count > 0)
+        while (selectionEffectInfos.Count > 0)
         {
-            if (selection_effect_infos[0].selection_effect != null)
+            if (selectionEffectInfos[0].selectionEffect != null)
             {
-                selection_effect_infos[0].selection_effect.SetActive(false);
-                selection_effect_infos[0].selection_effect.transform.SetParent(this.transform);
+                selectionEffectInfos[0].selectionEffect.SetActive(false);
+                selectionEffectInfos[0].selectionEffect.transform.SetParent(this.transform);
             }
-            selection_effect_infos.RemoveAt(0);
+            selectionEffectInfos.RemoveAt(0);
         }
 
-        selection_effect_infos = new List<SelectionEffectInfo>();
+        selectionEffectInfos = new List<SelectionEffectInfo>();
     }
 
-    public void StartSelectionLine(IntVector2 start_index)
+    public void StartSelectionLine(IntVector2 startIndex)
     {
-        Vector3 start_pos = grid.CalculateWorldPos(start_index);
-        start_pos.z = selection_line_z_pos;
+        Vector3 startPos = grid.CalculateWorldPos(startIndex);
+        startPos.z = selectionLineZPos;
 
-        Vector3[] new_line_positions = new Vector3[1] { start_pos };
-        selection_line.positionCount = new_line_positions.Length;
-        selection_line.SetPositions(new_line_positions);
+        Vector3[] newLinePositions = new Vector3[1] { startPos };
+        selectionLine.positionCount = newLinePositions.Length;
+        selectionLine.SetPositions(newLinePositions);
     }
 
-    public void AddPointToSelectionLine(IntVector2 new_point_index)
+    public void AddPointToSelectionLine(IntVector2 newPointIndex)
     {
-        Vector3 new_point = grid.CalculateWorldPos(new_point_index);
-        new_point.z = selection_line_z_pos;
+        Vector3 newPoint = grid.CalculateWorldPos(newPointIndex);
+        newPoint.z = selectionLineZPos;
 
-        Vector3[] new_line_positions = new Vector3[selection_line.positionCount + 1];
-        for (int i = 0; i < selection_line.positionCount; i++)
+        Vector3[] newLinePositions = new Vector3[selectionLine.positionCount + 1];
+        for (int i = 0; i < selectionLine.positionCount; i++)
         {
-            new_line_positions[i] = selection_line.GetPosition(i);
+            newLinePositions[i] = selectionLine.GetPosition(i);
         }
 
-        new_line_positions[new_line_positions.Length - 1] = new_point;
-        selection_line.positionCount = new_line_positions.Length;
-        selection_line.SetPositions(new_line_positions);
+        newLinePositions[newLinePositions.Length - 1] = newPoint;
+        selectionLine.positionCount = newLinePositions.Length;
+        selectionLine.SetPositions(newLinePositions);
     }
 
     public void ClearSelectionLine()
     {
-        selection_line.positionCount = 0;
-        selection_line.material = valid_selection_material;
+        selectionLine.positionCount = 0;
+        selectionLine.material = validSelectionMaterial;
     }
 
     public void InvalidateSelectionLine()
     {
-        selection_line.material = invalid_selection_material;
+        selectionLine.material = invalidSelectionMaterial;
     }
 
-    public void HighlightIndices(List<IntVector2> indices_to_highlight)
+    public void HighlightIndices(List<IntVector2> indicesToHighlight)
     {
-        if (display_connected_matches_highlight)
+        if (displayConnectedMatchesHighlight)
         {
-            for (int x = 0; x < grid.grid_width; x++)
+            for (int x = 0; x < grid.gridWidth; x++)
             {
-                for (int y = 0; y < grid.grid_height; y++)
+                for (int y = 0; y < grid.gridHeight; y++)
                 {
-                    bool ignore_index = false;
-                    for (int i = 0; i < indices_to_highlight.Count; i++)
+                    bool ignoreIndex = false;
+                    for (int i = 0; i < indicesToHighlight.Count; i++)
                     {
-                        if (indices_to_highlight[i] == new IntVector2(x, y))
+                        if (indicesToHighlight[i] == new IntVector2(x, y))
                         {
-                            ignore_index = true;
+                            ignoreIndex = true;
                         }
                     }
 
-                    if (ignore_index)
+                    if (ignoreIndex)
                     {
                         continue;
                     }
 
-                    grid.GetGridElementDataFromIndex(new IntVector2(x, y)).element_transform.GetComponentInChildren<Renderer>().material.color = non_highlighted_element_color;
+                    grid.GetGridElementDataFromIndex(new IntVector2(x, y)).elementTransform.GetComponentInChildren<Renderer>().material.color = nonHighlightedElementColor;
                 }
             }
         }
@@ -213,63 +213,63 @@ public class EffectManager : MonoBehaviour
 
     public void ClearHighlights()
     {
-        if (display_connected_matches_highlight)
+        if (displayConnectedMatchesHighlight)
         {
-            for (int x = 0; x < grid.grid_width; x++)
+            for (int x = 0; x < grid.gridWidth; x++)
             {
-                for (int y = 0; y < grid.grid_height; y++)
+                for (int y = 0; y < grid.gridHeight; y++)
                 {
-                    grid.GetGridElementDataFromIndex(new IntVector2(x, y)).element_transform.GetComponentInChildren<Renderer>().material.color = default_element_color;
+                    grid.GetGridElementDataFromIndex(new IntVector2(x, y)).elementTransform.GetComponentInChildren<Renderer>().material.color = defaultElementColor;
                 }
             }
         }
     }
 
-    public void SpawnCollectionEffectOnIndex(IntVector2 grid_index)
+    public void SpawnCollectionEffectOnIndex(IntVector2 gridIndex)
     {
-        GameObject effect = pool_manager.SpawnFromPool(grid.GetGridElementDataFromIndex(grid_index).element_type.collection_effect_pool_tag);
-        Vector3 spawn_pos = grid.CalculateWorldPos(grid_index);
-        spawn_pos.z = collection_effect_z_pos;
-        effect.transform.position = spawn_pos;
+        GameObject effect = poolManager.SpawnFromPool(grid.GetGridElementDataFromIndex(gridIndex).elementType.collectionEffectPoolTag);
+        Vector3 spawnPos = grid.CalculateWorldPos(gridIndex);
+        spawnPos.z = collectionEffectZPos;
+        effect.transform.position = spawnPos;
 
-        collection_effect_spawn_times.Enqueue(Time.time);
-        active_collection_effects.Enqueue(effect);
+        collectionEffectSpawnTimes.Enqueue(Time.time);
+        activeCollectionEffects.Enqueue(effect);
         effect.SetActive(true);
         effect.GetComponent<ParticleSystem>().Play(true);
     }
 
-    public void SpawnPointPopUpsForMatch(List<IntVector2> match_element_indices)
+    public void SpawnPointPopUpsForMatch(List<IntVector2> matchElementIndices)
     {
-        //print("match_element_indices.Count: " + match_element_indices.Count);
-        int element_count = match_element_indices.Count;
-        for (int i = 0; i < element_count; i++)
+        //print("matchElementIndices.Count: " + matchElementIndices.Count);
+        int elementCount = matchElementIndices.Count;
+        for (int i = 0; i < elementCount; i++)
         {
-            GameObject new_point_popup = pool_manager.SpawnFromPool(point_popup_pool_tag);
-            new_point_popup.GetComponentInChildren<Text>().text = element_count.ToString();
-            new_point_popup.transform.position = Camera.main.WorldToScreenPoint(grid.GetGridElementDataFromIndex(match_element_indices[i]).correct_world_pos);
-            new_point_popup.SetActive(true);
-            active_point_popups.Add(new_point_popup.transform);
+            GameObject newPointPopup = poolManager.SpawnFromPool(pointPopupPoolTag);
+            newPointPopup.GetComponentInChildren<Text>().text = elementCount.ToString();
+            newPointPopup.transform.position = Camera.main.WorldToScreenPoint(grid.GetGridElementDataFromIndex(matchElementIndices[i]).correctWorldPos);
+            newPointPopup.SetActive(true);
+            activePointPopups.Add(newPointPopup.transform);
         }
     }
 
     public void Restart()
     {
         //Reset and clear collection effects
-        while(active_collection_effects.Count > 0)
+        while(activeCollectionEffects.Count > 0)
         {
-            active_collection_effects.Dequeue().SetActive(false);
+            activeCollectionEffects.Dequeue().SetActive(false);
         }
 
-        collection_effect_spawn_times = new Queue<float>();
-        active_collection_effects = new Queue<GameObject>();
+        collectionEffectSpawnTimes = new Queue<float>();
+        activeCollectionEffects = new Queue<GameObject>();
 
         //Reset and clear point popup effects
-        for (int i = 0; i < active_point_popups.Count; i++)
+        for (int i = 0; i < activePointPopups.Count; i++)
         {
-            active_point_popups[i].gameObject.SetActive(false);
+            activePointPopups[i].gameObject.SetActive(false);
         }
 
-        active_point_popups = new List<Transform>();
+        activePointPopups = new List<Transform>();
 
         ClearSelectionLine();
         ClearAllSelectionEffects();
@@ -279,12 +279,12 @@ public class EffectManager : MonoBehaviour
 
 public struct SelectionEffectInfo
 {
-    public IntVector2 grid_index;
-    public GameObject selection_effect;
+    public IntVector2 gridIndex;
+    public GameObject selectionEffect;
 
-    public SelectionEffectInfo(IntVector2 _grid_index, GameObject _selection_effect)
+    public SelectionEffectInfo(IntVector2 _gridIndex, GameObject _selectionEffect)
     {
-        grid_index = _grid_index;
-        selection_effect = _selection_effect;
+        gridIndex = _gridIndex;
+        selectionEffect = _selectionEffect;
     }
 }

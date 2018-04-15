@@ -6,52 +6,52 @@ public class HexGrid : MonoBehaviour
 {
     // Original source: https://www.youtube.com/watch?v=konL0iB5gPI
 
-    //TODO: Correct grid start_pos calculations (7x6 grid is centered correctly, 6x5 is not?)
+    //TODO: Correct grid startPos calculations (7x6 grid is centered correctly, 6x5 is not?)
 
-    public delegate void ListListIntVector2(List<List<IntVector2>> list_list_vec2);
+    public delegate void ListListIntVector2(List<List<IntVector2>> listListVec2);
     public event ListListIntVector2 OnAutoMatchesFound;
 
-    public Transform hex_base_prefab;
-    public ElementType[] element_types;
+    public Transform hexBasePrefab;
+    public ElementType[] elementTypes;
 
-    public string grid_element_transform_pool_tag;
+    public string gridElementTransformPoolTag;
 
-    public int grid_width = 6;
-    public int grid_height = 6;
-    public int min_viable_connection = 2;
-    public int min_auto_match_connection = 10;
+    public int gridWidth = 6;
+    public int gridHeight = 6;
+    public int minViableConnection = 2;
+    public int minAutoMatchConnection = 10;
 
     public float gap = 0.1f;
-    public float min_new_element_spawn_y_pos = 2f;
+    public float minNewElementSpawnYPos = 2f;
 
-    public bool spawn_hex_bases = true;
-    public bool offset_individual_spawns = true;
+    public bool spawnHexBases = true;
+    public bool offsetIndividualSpawns = true;
 
-    private GridElementData[,] grid_elements;
-    private PoolManager pool_manager;
-    private EffectManager effect_manager;
+    private GridElementData[,] gridElements;
+    private PoolManager PoolManager;
+    private EffectManager effectManager;
 
-    private Coroutine element_movement;
-    private Vector3 start_pos;
-    private Vector3 fall_direction = Vector3.down; //TODO: Currently changing fall direction causes in infinite loop resulting in a freeze
-                                                   //(So keep fall_direction as Vector3.down)
+    private Coroutine elementMovementCoroutine;
+    private Vector3 startPos;
+    private Vector3 fallDirection = Vector3.down; //TODO: Currently changing fall direction causes in infinite loop resulting in a freeze
+                                                   //(So keep fallDirection as Vector3.down)
                                                    //Fix if necessary
 
-    private float hex_base_z_pos = 0.25f;
-    private float hex_width = 1f;
-    private float hex_height = 0.866f;
-    private float element_width = 0.725f;
-    private float spawn_offset_per_row = 1.25f;
-    private float spawn_offset_per_count = 0.05f;
+    private float hexBaseZPos = 0.25f;
+    private float hexWidth = 1f;
+    private float hexHeight = 0.866f;
+    private float elementWidth = 0.725f;
+    private float spawnOffsetPerRow = 1.25f;
+    private float SpawnOffsetPerElementCount = 0.05f;
 
-    private bool is_element_movement_done = true;
+    private bool isElementMovementDone = true;
 
     private void Start()
     {
-        pool_manager = GetComponent<PoolManager>();
-        effect_manager = GetComponent<EffectManager>();
+        PoolManager = GetComponent<PoolManager>();
+        effectManager = GetComponent<EffectManager>();
 
-        fall_direction.Normalize();
+        fallDirection.Normalize();
         AddGap();
         CalculateStartPos();
         CreateGrid();
@@ -59,28 +59,28 @@ public class HexGrid : MonoBehaviour
 
     private void AddGap()
     {
-        hex_width += hex_width * gap;
-        hex_height += hex_height * gap;
+        hexWidth += hexWidth * gap;
+        hexHeight += hexHeight * gap;
     }
 
     private void CalculateStartPos()
     {
         float x, y = 0;
 
-        float y_offset = (grid_width / 2 % 2 == 0) ? 0 : hex_height / 2;
+        float yOffset = (gridWidth / 2 % 2 == 0) ? 0 : hexHeight / 2;
 
-        x = -hex_width * 0.75f * (grid_width / 2f);
-        y = hex_height * (grid_height / 2f) - y_offset;
+        x = -hexWidth * 0.75f * (gridWidth / 2f);
+        y = hexHeight * (gridHeight / 2f) - yOffset;
 
-        start_pos = new Vector3(x, y, 0);
-        //print("Start_pos: " + start_pos);
+        startPos = new Vector3(x, y, 0);
+        //print("startPos: " + startPos);
     }
 
     private void CreateGrid()
     {
-        is_element_movement_done = false;
+        isElementMovementDone = false;
 
-        if (spawn_hex_bases)
+        if (spawnHexBases)
         {
             CreateGridBase();
         }
@@ -90,9 +90,9 @@ public class HexGrid : MonoBehaviour
 
     private void CreateGridBase()
     {
-        for (int x = 0; x < grid_width; x++)
+        for (int x = 0; x < gridWidth; x++)
         {
-            for (int y = 0; y < grid_height; y++)
+            for (int y = 0; y < gridHeight; y++)
             {
                 SpawnHexBaseTile(new IntVector2(x, y));
             }
@@ -101,7 +101,7 @@ public class HexGrid : MonoBehaviour
 
     private void InitializeGridElements()
     {
-        grid_elements = new GridElementData[grid_width, grid_height];
+        gridElements = new GridElementData[gridWidth, gridHeight];
 
         FillGrid(true);
         ClearGridOfAutoMatches();
@@ -109,111 +109,111 @@ public class HexGrid : MonoBehaviour
         MoveElementsToCorrectPositions();
     }
 
-    private void SpawnHexBaseTile(IntVector2 grid_index)
+    private void SpawnHexBaseTile(IntVector2 gridIndex)
     {
-        Transform hex = Instantiate(hex_base_prefab) as Transform;
-        Vector3 spawn_pos = CalculateWorldPos(grid_index);
-        spawn_pos.z = hex_base_z_pos;
-        hex.position = spawn_pos;
+        Transform hex = Instantiate(hexBasePrefab) as Transform;
+        Vector3 spawnPos = CalculateWorldPos(gridIndex);
+        spawnPos.z = hexBaseZPos;
+        hex.position = spawnPos;
         hex.eulerAngles = new Vector3(-90f, 0, 0);
 
         hex.parent = this.transform;
-        hex.name = "HexTile " + grid_index.x + "|" + grid_index.y;
+        hex.name = "HexTile " + gridIndex.x + "|" + gridIndex.y;
     }
 
-    private void CreateNewGridElement(ElementType element_type, Vector3 spawn_pos, IntVector2 grid_index, Transform parent)
+    private void CreateNewGridElement(ElementType elementType, Vector3 spawnPos, IntVector2 gridIndex, Transform parent)
     {
-        GameObject element = pool_manager.SpawnFromPool(grid_element_transform_pool_tag);
-        element.GetComponentInChildren<Renderer>().material = element_type.element_material;
-        element.transform.position = spawn_pos;
+        GameObject element = PoolManager.SpawnFromPool(gridElementTransformPoolTag);
+        element.GetComponentInChildren<Renderer>().material = elementType.elementMaterial;
+        element.transform.position = spawnPos;
         element.transform.parent = parent;
         element.SetActive(true);
-        grid_elements[grid_index.x, grid_index.y] = new GridElementData(element_type, element.transform, CalculateWorldPos(grid_index));
+        gridElements[gridIndex.x, gridIndex.y] = new GridElementData(elementType, element.transform, CalculateWorldPos(gridIndex));
     }
 
     private ElementType ChooseRandomElementType()
     {
-        return element_types[Random.Range(0, element_types.Length)];
+        return elementTypes[Random.Range(0, elementTypes.Length)];
     }
 
-    private List<List<IntVector2>> FindMatchesOfElementType(ElementType element_type)
+    private List<List<IntVector2>> FindMatchesOfElementType(ElementType elementType)
     {
-        List<List<IntVector2>> all_matching_element_indices = new List<List<IntVector2>>();
-        List<IntVector2> indices_already_checked = new List<IntVector2>();
+        List<List<IntVector2>> allMatchingElementIndices = new List<List<IntVector2>>();
+        List<IntVector2> indicesAlreadyChecked = new List<IntVector2>();
 
         //Loop through grid elements
-        for (int x = 0; x < grid_elements.GetLength(0); x++)
+        for (int x = 0; x < gridElements.GetLength(0); x++)
         {
-            for (int y = 0; y < grid_elements.GetLength(1); y++)
+            for (int y = 0; y < gridElements.GetLength(1); y++)
             {
-                if (grid_elements[x, y].flagged_for_removal_by_auto_match) continue;
-                if (indices_already_checked.Contains(new IntVector2(x, y))) continue;
+                if (gridElements[x, y].flaggedForRemovalByAutoMatch) continue;
+                if (indicesAlreadyChecked.Contains(new IntVector2(x, y))) continue;
 
                 //If the element is of matching type with the element to check against
-                if (IsOfMatchingElementType(element_type, grid_elements[x, y].element_type))
+                if (IsOfMatchingElementType(elementType, gridElements[x, y].elementType))
                 {
                     //print("Found element matching with the type to check at " + x + "|" + y);
                     //Store the matching neighbours on a one list
-                    List<IntVector2> matching_neighbours = new List<IntVector2>();
+                    List<IntVector2> matchingNeighbours = new List<IntVector2>();
                     //And the matching neighbours whose neighbours we have yet to check, on another list
-                    List<IntVector2> matching_neighbours_to_check = new List<IntVector2>();
+                    List<IntVector2> matchingNeighboursToCheck = new List<IntVector2>();
                     //Add the current element as the first item on both lists
-                    matching_neighbours.Add(new IntVector2(x, y));
-                    matching_neighbours_to_check.Add(new IntVector2(x, y));
+                    matchingNeighbours.Add(new IntVector2(x, y));
+                    matchingNeighboursToCheck.Add(new IntVector2(x, y));
 
                     //Check neighbours of all the neighbouring matches, until no unchecked matching neighbours are left
-                    while (matching_neighbours_to_check.Count > 0)
+                    while (matchingNeighboursToCheck.Count > 0)
                     {
-                        if (!indices_already_checked.Contains(matching_neighbours_to_check[0]))
-                            indices_already_checked.Add(matching_neighbours_to_check[0]);
+                        if (!indicesAlreadyChecked.Contains(matchingNeighboursToCheck[0]))
+                            indicesAlreadyChecked.Add(matchingNeighboursToCheck[0]);
 
-                        List<IntVector2> neighbouring_indices = GetNeighbouringIndices(matching_neighbours_to_check[0]);
+                        List<IntVector2> neighbouringIndices = GetNeighbouringIndices(matchingNeighboursToCheck[0]);
 
-                        for (int i = 0; i < neighbouring_indices.Count; i++)
+                        for (int i = 0; i < neighbouringIndices.Count; i++)
                         {
-                            if (grid_elements[neighbouring_indices[i].x, neighbouring_indices[i].y].flagged_for_removal_by_auto_match) continue;
+                            if (gridElements[neighbouringIndices[i].x, neighbouringIndices[i].y].flaggedForRemovalByAutoMatch) continue;
 
-                            if (IsOfMatchingElementType(element_type, grid_elements[neighbouring_indices[i].x, neighbouring_indices[i].y].element_type))
+                            if (IsOfMatchingElementType(elementType, gridElements[neighbouringIndices[i].x, neighbouringIndices[i].y].elementType))
                             {
-                                if (!matching_neighbours.Contains(neighbouring_indices[i]))
+                                if (!matchingNeighbours.Contains(neighbouringIndices[i]))
                                 {
-                                    matching_neighbours.Add(neighbouring_indices[i]);
-                                    matching_neighbours_to_check.Add(neighbouring_indices[i]);
-                                    grid_elements[neighbouring_indices[i].x, neighbouring_indices[i].y].flagged_for_removal_by_auto_match = true;
+                                    matchingNeighbours.Add(neighbouringIndices[i]);
+                                    matchingNeighboursToCheck.Add(neighbouringIndices[i]);
+                                    gridElements[neighbouringIndices[i].x, neighbouringIndices[i].y].flaggedForRemovalByAutoMatch = true;
                                 }
                             }
                         }
 
-                        //print("Removing matching neighbour at index " + matching_neighbours_to_check[0] + " to check from list.");
-                        matching_neighbours_to_check.RemoveAt(0);
+                        //print("Removing matching neighbour at index " + matchingNeighboursToCheck[0] + " to check from list.");
+                        matchingNeighboursToCheck.RemoveAt(0);
                     }
 
-                    if (matching_neighbours.Count >= min_auto_match_connection)
+                    if (matchingNeighbours.Count >= minAutoMatchConnection)
                     {
-                        //print("Connected matches of index " + x + "|" + y + " checked, adding " + matching_neighbours.Count + " indices to the match list.");
-                        all_matching_element_indices.Add(matching_neighbours);
+                        //print("Connected matches of index " + x + "|" + y + " checked, adding " + matchingNeighbours.Count + " indices to the match list.");
+                        allMatchingElementIndices.Add(matchingNeighbours);
                     }
                     //else
                     //{
-                    //    print("Connected matches of index " + x + "|" + y + " checked, connected element count not big enough for match, ignoring indices (matching_neighbours.Count: " + matching_neighbours.Count + ").");
+                    //    print("Connected matches of index " + x + "|" + y + " checked, connected element count not big enough for match, ignoring indices (matchingNeighbours.Count: " + matchingNeighbours.Count + ").");
                     //}
                 }
             }
         }
 
-        return all_matching_element_indices;
+        return allMatchingElementIndices;
     }
 
-    private bool IsOfMatchingElementType(ElementType main_type, ElementType other_type)
+    private bool IsOfMatchingElementType(ElementType mainType, ElementType otherType)
     {
-        if (other_type == main_type)
+        if (otherType == mainType)
         {
             return true;
         }
 
-        for (int i = 0; i < main_type.matching_elements.Length; i++)
+        for (int i = 0; i < mainType.matchingElements.Length; i++)
         {
-            if (other_type == main_type.matching_elements[i])
+            if (otherType == mainType.matchingElements[i])
             {
                 return true;
             }
@@ -224,27 +224,27 @@ public class HexGrid : MonoBehaviour
 
     private void RecalculateSpawnPositions()
     {
-        int spawn_count = 0;
+        int spawnCount = 0;
 
-        for (int x = grid_elements.GetLength(0) - 1; x >= 0; x--)
+        for (int x = gridElements.GetLength(0) - 1; x >= 0; x--)
         {
-            for (int y = grid_elements.GetLength(1) - 1; y >= 0; y--)
+            for (int y = gridElements.GetLength(1) - 1; y >= 0; y--)
             {
-                int number_of_elements_under_this_one = grid_elements.GetLength(1) - (y + 1);
+                int numberOfElementsUnderThisOne = gridElements.GetLength(1) - (y + 1);
 
-                Vector3 spawn_pos_offset = -fall_direction * hex_height
-                    * (number_of_elements_under_this_one + 1 + grid_elements.GetLength(1));
+                Vector3 spawnPosOffset = -fallDirection * hexHeight
+                    * (numberOfElementsUnderThisOne + 1 + gridElements.GetLength(1));
 
-                if (offset_individual_spawns)
+                if (offsetIndividualSpawns)
                 {
-                    spawn_pos_offset *= (1 + (spawn_offset_per_count * spawn_count));
+                    spawnPosOffset *= (1 + (SpawnOffsetPerElementCount * spawnCount));
                 }
 
-                spawn_pos_offset.y += min_new_element_spawn_y_pos;
-                Vector3 spawn_pos = CalculateWorldPos(new IntVector2(x, y)) + spawn_pos_offset;
+                spawnPosOffset.y += minNewElementSpawnYPos;
+                Vector3 spawnPos = CalculateWorldPos(new IntVector2(x, y)) + spawnPosOffset;
 
-                grid_elements[x, y].element_transform.position = spawn_pos;
-                spawn_count++;
+                gridElements[x, y].elementTransform.position = spawnPos;
+                spawnCount++;
             }
         }
     }
@@ -268,57 +268,57 @@ public class HexGrid : MonoBehaviour
         }
         else
         {
-            is_element_movement_done = true;
+            isElementMovementDone = true;
         }
     }
 
-    private IEnumerator MoveAllElementsTowardsCorrectWorldPositions(float movement_speed_increment_multiplier = 1f)
+    private IEnumerator MoveAllElementsTowardsCorrectWorldPositions(float movementSpeedIncrementMultiplier = 1f)
     {
         //print("Starting drop 'animations'.");
-        float movement_speed = 0f;
-        float movement_speed_increment_per_second = 25f;
+        float movementSpeed = 0f;
+        float movementSpeedIncrementPerSecond = 25f;
 
-        List<IntVector2> indices_to_move = new List<IntVector2>();
+        List<IntVector2> indicesToMove = new List<IntVector2>();
 
-        for (int x = 0; x < grid_elements.GetLength(0); x++)
+        for (int x = 0; x < gridElements.GetLength(0); x++)
         {
-            for (int y = 0; y < grid_elements.GetLength(1); y++)
+            for (int y = 0; y < gridElements.GetLength(1); y++)
             {
-                if (grid_elements[x, y].element_transform.position != grid_elements[x, y].correct_world_pos)
+                if (gridElements[x, y].elementTransform.position != gridElements[x, y].correctWorldPos)
                 {
-                    indices_to_move.Add(new IntVector2(x, y));
+                    indicesToMove.Add(new IntVector2(x, y));
                 }
             }
         }
 
-        //print("Indices to move count " + indices_to_move.Count);
+        //print("Indices to move count " + indicesToMove.Count);
 
-        while (indices_to_move.Count > 0)
+        while (indicesToMove.Count > 0)
         {
-            for (int i = 0; i < indices_to_move.Count; i++)
+            for (int i = 0; i < indicesToMove.Count; i++)
             {
-                GridElementData element_to_move = grid_elements[indices_to_move[i].x, indices_to_move[i].y];
+                GridElementData elementToMove = gridElements[indicesToMove[i].x, indicesToMove[i].y];
 
-                Vector3 direction_to_correct_pos = element_to_move.correct_world_pos - element_to_move.element_transform.position;
-                float distance_to_correct_pos = direction_to_correct_pos.magnitude;
+                Vector3 directionToCorrectPos = elementToMove.correctWorldPos - elementToMove.elementTransform.position;
+                float distanceToCorrectPos = directionToCorrectPos.magnitude;
 
-                if (distance_to_correct_pos <= movement_speed * Time.deltaTime)
+                if (distanceToCorrectPos <= movementSpeed * Time.deltaTime)
                 {
-                    element_to_move.element_transform.position = element_to_move.correct_world_pos;
-                    grid_elements[indices_to_move[i].x, indices_to_move[i].y].just_spawned = false;
-                    //print("Element at " + indices_to_move[i] + " has arrived at correct world pos. indices_to_move.Count: "
-                    //    + indices_to_move.Count + ", i: " + i);
-                    indices_to_move.RemoveAt(i);
+                    elementToMove.elementTransform.position = elementToMove.correctWorldPos;
+                    gridElements[indicesToMove[i].x, indicesToMove[i].y].justSpawned = false;
+                    //print("Element at " + indicesToMove[i] + " has arrived at correct world pos. indicesToMove.Count: "
+                    //    + indicesToMove.Count + ", i: " + i);
+                    indicesToMove.RemoveAt(i);
                     i--;
                 }
                 else
                 {
-                    direction_to_correct_pos /= distance_to_correct_pos;
-                    element_to_move.element_transform.position += direction_to_correct_pos * movement_speed * Time.deltaTime;
+                    directionToCorrectPos /= distanceToCorrectPos;
+                    elementToMove.elementTransform.position += directionToCorrectPos * movementSpeed * Time.deltaTime;
                 }
             }
 
-            movement_speed += movement_speed_increment_per_second * movement_speed_increment_multiplier * Time.deltaTime;
+            movementSpeed += movementSpeedIncrementPerSecond * movementSpeedIncrementMultiplier * Time.deltaTime;
 
             yield return new WaitForEndOfFrame();
         }
@@ -327,108 +327,108 @@ public class HexGrid : MonoBehaviour
         ElementMovementFinished();
     }
 
-    public void MoveElementsToCorrectPositions(float movement_speed_increment_multiplier = 1f)
+    public void MoveElementsToCorrectPositions(float movementSpeedIncrementMultiplier = 1f)
     {
-        is_element_movement_done = false;
+        isElementMovementDone = false;
 
-        if (element_movement != null)
+        if (elementMovementCoroutine != null)
         {
-            StopCoroutine(element_movement);
+            StopCoroutine(elementMovementCoroutine);
         }
 
-        element_movement = StartCoroutine(MoveAllElementsTowardsCorrectWorldPositions(movement_speed_increment_multiplier));
+        elementMovementCoroutine = StartCoroutine(MoveAllElementsTowardsCorrectWorldPositions(movementSpeedIncrementMultiplier));
     }
 
     public bool GetIsElementMovementDone()
     {
-        return is_element_movement_done;
+        return isElementMovementDone;
     }
 
-    public List<IntVector2> FindMatchesForIndex(IntVector2 grid_index)
+    public List<IntVector2> FindMatchesForIndex(IntVector2 gridIndex)
     {
-        ElementType element_type = grid_elements[grid_index.x, grid_index.y].element_type;
+        ElementType elementType = gridElements[gridIndex.x, gridIndex.y].elementType;
 
         //Store the matching neighbours on a one list
-        List<IntVector2> matching_neighbours = new List<IntVector2>();
+        List<IntVector2> matchingNeighbours = new List<IntVector2>();
         //And the matching neighbours whose neighbours we have yet to check, on another list
-        List<IntVector2> matching_neighbours_to_check = new List<IntVector2>();
+        List<IntVector2> matchingNeighboursToCheck = new List<IntVector2>();
         //Add the current element as the first item on both lists
-        matching_neighbours.Add(grid_index);
-        matching_neighbours_to_check.Add(grid_index);
+        matchingNeighbours.Add(gridIndex);
+        matchingNeighboursToCheck.Add(gridIndex);
 
         //Check neighbours of all the neighbouring matches, until no unchecked matching neighbours are left
-        while (matching_neighbours_to_check.Count > 0)
+        while (matchingNeighboursToCheck.Count > 0)
         {
-            List<IntVector2> neighbouring_indices = GetNeighbouringIndices(matching_neighbours_to_check[0]);
+            List<IntVector2> neighbouringIndices = GetNeighbouringIndices(matchingNeighboursToCheck[0]);
 
-            for (int i = 0; i < neighbouring_indices.Count; i++)
+            for (int i = 0; i < neighbouringIndices.Count; i++)
             {
-                if (IsOfMatchingElementType(element_type, grid_elements[neighbouring_indices[i].x, neighbouring_indices[i].y].element_type))
+                if (IsOfMatchingElementType(elementType, gridElements[neighbouringIndices[i].x, neighbouringIndices[i].y].elementType))
                 {
-                    if (!matching_neighbours.Contains(neighbouring_indices[i]))
+                    if (!matchingNeighbours.Contains(neighbouringIndices[i]))
                     {
-                        matching_neighbours.Add(neighbouring_indices[i]);
-                        matching_neighbours_to_check.Add(neighbouring_indices[i]);
+                        matchingNeighbours.Add(neighbouringIndices[i]);
+                        matchingNeighboursToCheck.Add(neighbouringIndices[i]);
                     }
                 }
             }
 
-            matching_neighbours_to_check.RemoveAt(0);
+            matchingNeighboursToCheck.RemoveAt(0);
         }
 
-        return matching_neighbours;
+        return matchingNeighbours;
     }
 
-    public void SwapElements(IntVector2 a_index, IntVector2 b_index)
+    public void SwapElements(IntVector2 aIndex, IntVector2 bIndex)
     {
-        GridElementData old_a = grid_elements[a_index.x, a_index.y];
-        grid_elements[a_index.x, a_index.y] = grid_elements[b_index.x, b_index.y];
-        grid_elements[b_index.x, b_index.y] = old_a;
+        GridElementData oldA = gridElements[aIndex.x, aIndex.y];
+        gridElements[aIndex.x, aIndex.y] = gridElements[bIndex.x, bIndex.y];
+        gridElements[bIndex.x, bIndex.y] = oldA;
 
-        grid_elements[a_index.x, a_index.y].correct_world_pos = CalculateWorldPos(a_index);
-        grid_elements[b_index.x, b_index.y].correct_world_pos = CalculateWorldPos(b_index);
+        gridElements[aIndex.x, aIndex.y].correctWorldPos = CalculateWorldPos(aIndex);
+        gridElements[bIndex.x, bIndex.y].correctWorldPos = CalculateWorldPos(bIndex);
     }
 
-    public void ResetElementWorldPos(IntVector2 grid_index)
+    public void ResetElementWorldPos(IntVector2 gridIndex)
     {
-        GridElementData element = grid_elements[grid_index.x, grid_index.y];
-        if (element.element_transform != null)
+        GridElementData element = gridElements[gridIndex.x, gridIndex.y];
+        if (element.elementTransform != null)
         {
-            element.correct_world_pos = CalculateWorldPos(grid_index);
-            element.element_transform.transform.position = element.correct_world_pos;
-            element.element_transform.transform.parent = this.transform;
+            element.correctWorldPos = CalculateWorldPos(gridIndex);
+            element.elementTransform.transform.position = element.correctWorldPos;
+            element.elementTransform.transform.parent = this.transform;
         }
     }
 
-    public Vector3 CalculateWorldPos(IntVector2 grid_pos)
+    public Vector3 CalculateWorldPos(IntVector2 gridPos)
     {
         float x, y = 0;
 
-        float y_offset = (grid_pos.x % 2 == 0) ? 0 : hex_height / 2;
+        float yOffset = (gridPos.x % 2 == 0) ? 0 : hexHeight / 2;
 
-        x = start_pos.x + grid_pos.x * hex_width * 0.75f;
-        y = start_pos.y - grid_pos.y * hex_height + y_offset;
+        x = startPos.x + gridPos.x * hexWidth * 0.75f;
+        y = startPos.y - gridPos.y * hexHeight + yOffset;
 
         return new Vector3(x, y, 0);
     }
 
-    public IntVector2 GetGridIndexFromWorldPosition(Vector3 world_pos, bool limit_to_element_width = false)
+    public IntVector2 GetGridIndexFromWorldPosition(Vector3 worldPos, bool limitToElementWidth = false)
     {
-        for (int x = 0; x < grid_elements.GetLength(0); x++)
+        for (int x = 0; x < gridElements.GetLength(0); x++)
         {
-            for (int y = 0; y < grid_elements.GetLength(1); y++)
+            for (int y = 0; y < gridElements.GetLength(1); y++)
             {
-                Vector3 grid_world_pos = CalculateWorldPos(new IntVector2(x, y));
-                float half_area_size = limit_to_element_width ? element_width / 2 : (hex_height - gap) / 2;
-                float x_min = grid_world_pos.x - half_area_size;
-                float x_max = grid_world_pos.x + half_area_size;
-                float y_min = grid_world_pos.y - half_area_size;
-                float y_max = grid_world_pos.y + half_area_size;
+                Vector3 gridWorldPos = CalculateWorldPos(new IntVector2(x, y));
+                float halfAreaSize = limitToElementWidth ? elementWidth / 2 : (hexHeight - gap) / 2;
+                float xMin = gridWorldPos.x - halfAreaSize;
+                float xMax = gridWorldPos.x + halfAreaSize;
+                float yMin = gridWorldPos.y - halfAreaSize;
+                float yMax = gridWorldPos.y + halfAreaSize;
 
-                if (world_pos.x >= x_min && world_pos.x <= x_max && world_pos.y >= y_min && world_pos.y <= y_max)
+                if (worldPos.x >= xMin && worldPos.x <= xMax && worldPos.y >= yMin && worldPos.y <= yMax)
                 {
-                    IntVector2 matching_grid_index = new IntVector2(x, y);
-                    return matching_grid_index;
+                    IntVector2 matchingGridIndices = new IntVector2(x, y);
+                    return matchingGridIndices;
                 }
             }
         }
@@ -436,48 +436,48 @@ public class HexGrid : MonoBehaviour
         return new IntVector2(-1, -1);
     }
 
-    public GridElementData GetGridElementDataFromIndex(IntVector2 grid_index)
+    public GridElementData GetGridElementDataFromIndex(IntVector2 gridIndex)
     {
-        return grid_elements[grid_index.x, grid_index.y];
+        return gridElements[gridIndex.x, gridIndex.y];
     }
 
-    public List<IntVector2> GetNeighbouringIndices(IntVector2 grid_index)
+    public List<IntVector2> GetNeighbouringIndices(IntVector2 gridIndex)
     {
         List<IntVector2> neighbours = new List<IntVector2>();
 
-        for (int x = grid_index.x - 1; x <= grid_index.x + 1; x++)
+        for (int x = gridIndex.x - 1; x <= gridIndex.x + 1; x++)
         {
-            if (x < 0 || x >= grid_elements.GetLength(0))
+            if (x < 0 || x >= gridElements.GetLength(0))
                 continue;
 
 
-            for (int y = grid_index.y - 1; y <= grid_index.y + 1; y++)
+            for (int y = gridIndex.y - 1; y <= gridIndex.y + 1; y++)
             {
-                if (y < 0 || y >= grid_elements.GetLength(1))
+                if (y < 0 || y >= gridElements.GetLength(1))
                     continue;
 
-                if (CheckIfNeighbours(grid_index, new IntVector2(x, y)))
+                if (CheckIfNeighbours(gridIndex, new IntVector2(x, y)))
                     neighbours.Add(new IntVector2(x, y));
             }
         }
 
-        //print("Element " + index_x + "|" + index_y + " neighbour count: " + neighbours.Count);
+        //print("Element " + gridIndex.x + "|" + gridIndex.y + " neighbour count: " + neighbours.Count);
 
         return neighbours;
     }
 
-    public bool CheckIfNeighbours(IntVector2 a, IntVector2 b)
+    public bool CheckIfNeighbours(IntVector2 aIndex, IntVector2 bIndex)
     {
-        if (b.x >= a.x - 1 && b.x <= a.x + 1 && b.y >= a.y - 1 && b.y <= a.y + 1)
+        if (bIndex.x >= aIndex.x - 1 && bIndex.x <= aIndex.x + 1 && bIndex.y >= aIndex.y - 1 && bIndex.y <= aIndex.y + 1)
         {
-            if (b.x == a.x && b.y == a.y) return false;
+            if (bIndex.x == aIndex.x && bIndex.y == aIndex.y) return false;
 
             //Is the index on an even column?
-            if (a.x % 2 == 0)
+            if (aIndex.x % 2 == 0)
             {
-                if ((b.x == a.x - 1 || b.x == a.x + 1) && b.y == a.y - 1) return false;
+                if ((bIndex.x == aIndex.x - 1 || bIndex.x == aIndex.x + 1) && bIndex.y == aIndex.y - 1) return false;
             }
-            else if ((b.x == a.x - 1 || b.x == a.x + 1) && b.y == a.y + 1) return false;
+            else if ((bIndex.x == aIndex.x - 1 || bIndex.x == aIndex.x + 1) && bIndex.y == aIndex.y + 1) return false;
 
             return true;
         }
@@ -485,81 +485,81 @@ public class HexGrid : MonoBehaviour
         return false;
     }
 
-    public int RemoveExistingMatches(bool ignore_callback_event = false, bool spawn_collection_effects = true)
+    public int RemoveExistingMatches(bool ignoreCallbackEvent = false, bool spawnCollectionEffect = true)
     {
-        List<List<IntVector2>> match_indices = new List<List<IntVector2>>();
-        for (int i = 0; i < element_types.Length; i++)
+        List<List<IntVector2>> matchIndices = new List<List<IntVector2>>();
+        for (int i = 0; i < elementTypes.Length; i++)
         {
-            match_indices.AddRange(FindMatchesOfElementType(element_types[i]));
+            matchIndices.AddRange(FindMatchesOfElementType(elementTypes[i]));
         }
 
-        //Reset flagged_for_removal_by_auto_match flags
-        for (int x = 0; x < grid_elements.GetLength(0); x++)
+        //Reset flaggedForRemovalByAutoMatch flags
+        for (int x = 0; x < gridElements.GetLength(0); x++)
         {
-            for (int y = 0; y < grid_elements.GetLength(1); y++)
+            for (int y = 0; y < gridElements.GetLength(1); y++)
             {
-                grid_elements[x, y].flagged_for_removal_by_auto_match = false;
+                gridElements[x, y].flaggedForRemovalByAutoMatch = false;
             }
         }
 
-        if (!ignore_callback_event && OnAutoMatchesFound != null)
-            OnAutoMatchesFound(match_indices);
+        if (!ignoreCallbackEvent && OnAutoMatchesFound != null)
+            OnAutoMatchesFound(matchIndices);
 
-        int removed_elements_count = 0;
-        for (int j = 0; j < match_indices.Count; j++)
+        int removedElementsCount = 0;
+        for (int j = 0; j < matchIndices.Count; j++)
         {
-            RemoveElementsAtIndices(match_indices[j], spawn_collection_effects);
-            removed_elements_count += match_indices[j].Count;
+            RemoveElementsAtIndices(matchIndices[j], spawnCollectionEffect);
+            removedElementsCount += matchIndices[j].Count;
         }
-        //print("Removed " + removed_elements_count + " elements due to auto-matching.");
+        //print("Removed " + removedElementsCount + " elements due to auto-matching.");
 
-        return match_indices.Count;
+        return matchIndices.Count;
     }
 
-    public void RemoveElementAtIndex(IntVector2 grid_index, bool disable_element_transform = true, bool spawn_collection_effect = true)
+    public void RemoveElementAtIndex(IntVector2 gridIndex, bool disableElementTransform = true, bool spawnCollectionElement = true)
     {
-        if (spawn_collection_effect)
+        if (spawnCollectionElement)
         {
-            effect_manager.SpawnCollectionEffectOnIndex(grid_index);
+            effectManager.SpawnCollectionEffectOnIndex(gridIndex);
         }
 
-        if (disable_element_transform)
+        if (disableElementTransform)
         {
-            grid_elements[grid_index.x, grid_index.y].element_transform.gameObject.SetActive(false);
+            gridElements[gridIndex.x, gridIndex.y].elementTransform.gameObject.SetActive(false);
         }
 
-        grid_elements[grid_index.x, grid_index.y].element_transform = null;
-        grid_elements[grid_index.x, grid_index.y].element_type = null;
+        gridElements[gridIndex.x, gridIndex.y].elementTransform = null;
+        gridElements[gridIndex.x, gridIndex.y].elementType = null;
     }
 
-    public void RemoveElementsAtIndices(List<IntVector2> grid_indices, bool spawn_collection_effects = true)
+    public void RemoveElementsAtIndices(List<IntVector2> gridIndices, bool spawnCollectionEffects = true)
     {
-        for (int i = 0; i < grid_indices.Count; i++)
+        for (int i = 0; i < gridIndices.Count; i++)
         {
-            RemoveElementAtIndex(grid_indices[i], spawn_collection_effect: spawn_collection_effects);
+            RemoveElementAtIndex(gridIndices[i], spawnCollectionElement: spawnCollectionEffects);
         }
     }
 
     public void RemoveAllElements()
     {
-        for (int x = 0; x < grid_elements.GetLength(0); x++)
+        for (int x = 0; x < gridElements.GetLength(0); x++)
         {
-            for (int y = 0; y < grid_elements.GetLength(1); y++)
+            for (int y = 0; y < gridElements.GetLength(1); y++)
             {
-                grid_elements[x, y].element_transform.gameObject.SetActive(false);
+                gridElements[x, y].elementTransform.gameObject.SetActive(false);
             }
         }
 
-        grid_elements = new GridElementData[grid_width, grid_height];
+        gridElements = new GridElementData[gridWidth, gridHeight];
     }
 
     private bool CheckForEmptyGridIndices()
     {
-        for (int x = 0; x < grid_elements.GetLength(0); x++)
+        for (int x = 0; x < gridElements.GetLength(0); x++)
         {
-            for (int y = 0; y < grid_elements.GetLength(1); y++)
+            for (int y = 0; y < gridElements.GetLength(1); y++)
             {
-                if (grid_elements[x, y].element_transform == null)
+                if (gridElements[x, y].elementTransform == null)
                 {
                     return true;
                 }
@@ -569,75 +569,75 @@ public class HexGrid : MonoBehaviour
         return false;
     }
 
-    public void FillGrid(bool full_spawn = false)
+    public void FillGrid(bool fullSpawn = false)
     {
-        int spawn_count = 0;
+        int spawnCount = 0;
 
         while (CheckForEmptyGridIndices())
         {
             //Find all empty indices
-            for (int x = grid_elements.GetLength(0) - 1; x >= 0; x--)
+            for (int x = gridElements.GetLength(0) - 1; x >= 0; x--)
             {
-                for (int y = grid_elements.GetLength(1) - 1; y >= 0; y--)
+                for (int y = gridElements.GetLength(1) - 1; y >= 0; y--)
                 {
-                    if (grid_elements[x, y].element_transform == null)
+                    if (gridElements[x, y].elementTransform == null)
                     {
                         //Find the correct index for the element to descend
-                        Vector3 correct_world_pos = CalculateWorldPos(new IntVector2(x, y));
-                        Vector3 descending_element_world_pos = correct_world_pos - fall_direction * hex_height;
-                        IntVector2 descending_element_index = (y - 1 >= 0)
+                        Vector3 correctWorldPos = CalculateWorldPos(new IntVector2(x, y));
+                        Vector3 descendingElementWorldPos = correctWorldPos - fallDirection * hexHeight;
+                        IntVector2 descendingElementIndex = (y - 1 >= 0)
                             ? new IntVector2(x, y - 1)
-                            : GetGridIndexFromWorldPosition(descending_element_world_pos);
+                            : GetGridIndexFromWorldPosition(descendingElementWorldPos);
 
-                        //print(x + "|" + y + " correct_world_pos: " + correct_world_pos + ", fall_direction_3d_normalized: " + fall_direction_3d_normalized
-                        //    + ", hex_height: " + hex_height);
-                        //print("descending_element_world_pos: " + descending_element_world_pos + ", descending_element_index: " + descending_element_index);
-                        if (descending_element_index.x >= 0 && descending_element_index.x < grid_elements.GetLength(0)
-                            && descending_element_index.y >= 0 && descending_element_index.y < grid_elements.GetLength(1))
+                        //print(x + "|" + y + " correctWorldPos: " + correctWorldPos + ", fallDirection: " + fallDirection
+                        //    + ", hexHeight: " + hexHeight);
+                        //print("descendingElementWorldPos: " + descendingElementWorldPos + ", descendingElementIndex: " + descendingElementIndex);
+                        if (descendingElementIndex.x >= 0 && descendingElementIndex.x < gridElements.GetLength(0)
+                            && descendingElementIndex.y >= 0 && descendingElementIndex.y < gridElements.GetLength(1))
                         {
                             //"Drop" elements above the empty indices to fill the empty ones
-                            GridElementData grid_element = grid_elements[descending_element_index.x, descending_element_index.y];
-                            if (!(full_spawn && grid_element.element_transform == null))
+                            GridElementData gridElement = gridElements[descendingElementIndex.x, descendingElementIndex.y];
+                            if (!(fullSpawn && gridElement.elementTransform == null))
                             {
-                                grid_elements[x, y] = grid_element;
-                                grid_elements[x, y].correct_world_pos = correct_world_pos;
-                                RemoveElementAtIndex(descending_element_index, false, false);
-                                //print("Dropped an element from " + descending_element_index + " to fill an empty index at " + x + "|" + y);
+                                gridElements[x, y] = gridElement;
+                                gridElements[x, y].correctWorldPos = correctWorldPos;
+                                RemoveElementAtIndex(descendingElementIndex, false, false);
+                                //print("Dropped an element from " + descendingElementIndex + " to fill an empty index at " + x + "|" + y);
                                 continue;
                             }
                         }
 
                         //Count the number of elements spawned on the same column on this turn
-                        int number_of_newly_spawned_elements_under_this_one = 0;
-                        for (int y_2 = y + 1; y_2 < grid_elements.GetLength(1); y_2++)
+                        int numberOfNewlySpawnedElementsUnderThisOne = 0;
+                        for (int y2 = y + 1; y2 < gridElements.GetLength(1); y2++)
                         {
-                            GridElementData grid_element = grid_elements[x, y_2];
-                            if (grid_element.element_transform != null)
+                            GridElementData gridElement = gridElements[x, y2];
+                            if (gridElement.elementTransform != null)
                             {
-                                if (grid_element.just_spawned)
+                                if (gridElement.justSpawned)
                                 {
-                                    number_of_newly_spawned_elements_under_this_one++;
+                                    numberOfNewlySpawnedElementsUnderThisOne++;
                                 }
                             }
                         }
 
                         //Calculate the proper spawn position
-                        Vector3 spawn_pos_offset = -fall_direction * hex_height
-                            * (number_of_newly_spawned_elements_under_this_one + 1);
+                        Vector3 spawnPosOffset = -fallDirection * hexHeight
+                            * (numberOfNewlySpawnedElementsUnderThisOne + 1);
 
-                        if (!full_spawn)
+                        if (!fullSpawn)
                         {
-                            spawn_pos_offset *= Mathf.Pow(spawn_offset_per_row, number_of_newly_spawned_elements_under_this_one + 1);
+                            spawnPosOffset *= Mathf.Pow(spawnOffsetPerRow, numberOfNewlySpawnedElementsUnderThisOne + 1);
                         }
 
-                        spawn_pos_offset.y += min_new_element_spawn_y_pos;
-                        descending_element_world_pos = correct_world_pos + spawn_pos_offset;
+                        spawnPosOffset.y += minNewElementSpawnYPos;
+                        descendingElementWorldPos = correctWorldPos + spawnPosOffset;
 
-                        //print("FillGrid: Creating new element at " + x + "|" + y + ", spawn_pos: " + descending_element_world_pos 
-                        //    + ", number_of_newly_spawned_elements_under_this_one: " + number_of_newly_spawned_elements_under_this_one);
+                        //print("FillGrid: Creating new element at " + x + "|" + y + ", spawnPos: " + descendingElementWorldPos 
+                        //    + ", numberOfNewlySpawnedElementsUnderThisOne: " + numberOfNewlySpawnedElementsUnderThisOne);
 
-                        CreateNewGridElement(ChooseRandomElementType(), descending_element_world_pos, new IntVector2(x, y), this.transform);
-                        spawn_count++;
+                        CreateNewGridElement(ChooseRandomElementType(), descendingElementWorldPos, new IntVector2(x, y), this.transform);
+                        spawnCount++;
                     }
                 }
             }
@@ -646,7 +646,7 @@ public class HexGrid : MonoBehaviour
 
     public void Restart()
     {
-        is_element_movement_done = false;
+        isElementMovementDone = false;
 
         RemoveAllElements();
         InitializeGridElements();
@@ -655,19 +655,19 @@ public class HexGrid : MonoBehaviour
 
 public struct GridElementData
 {
-    public ElementType element_type;
-    public Transform element_transform;
-    public Vector3 correct_world_pos;
-    public bool just_spawned;
-    public bool flagged_for_removal_by_auto_match;
+    public ElementType elementType;
+    public Transform elementTransform;
+    public Vector3 correctWorldPos;
+    public bool justSpawned;
+    public bool flaggedForRemovalByAutoMatch;
 
-    public GridElementData(ElementType _element_type, Transform _element_transform, Vector3 _correct_world_pos)
+    public GridElementData(ElementType _elementType, Transform _elementTransform, Vector3 _correctWorldPos)
     {
-        element_type = _element_type;
-        element_transform = _element_transform;
-        correct_world_pos = _correct_world_pos;
-        just_spawned = true;
-        flagged_for_removal_by_auto_match = false;
+        elementType = _elementType;
+        elementTransform = _elementTransform;
+        correctWorldPos = _correctWorldPos;
+        justSpawned = true;
+        flaggedForRemovalByAutoMatch = false;
     }
 }
 

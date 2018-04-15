@@ -9,92 +9,92 @@ public class PoolManager : MonoBehaviour
     {
         public string tag;
         public GameObject prefab;
-        public int min_size;
+        public int minSize;
     }
 
-    public Transform canvas_transform;
+    public Transform canvasTransform;
     public List<Pool> pools;
-    public List<Pool> ui_object_pools;
+    public List<Pool> uiObjectPools;
 
-    private Dictionary<string, List<GameObject>> pool_dictionary;
-    private Dictionary<string, List<GameObject>> ui_object_pool_dictionary;
-    private Transform pool_holder;
+    private Dictionary<string, List<GameObject>> poolDictionary;
+    private Dictionary<string, List<GameObject>> uiObjectPoolDictionary;
+    private Transform poolHolder;
 
     private void Awake()
     {
-        pool_holder = new GameObject("PoolHolder").transform;
-        pool_holder.SetParent(this.transform);
+        poolHolder = new GameObject("PoolHolder").transform;
+        poolHolder.SetParent(this.transform);
 
-        pool_dictionary = new Dictionary<string, List<GameObject>>();
-        ui_object_pool_dictionary = new Dictionary<string, List<GameObject>>();
+        poolDictionary = new Dictionary<string, List<GameObject>>();
+        uiObjectPoolDictionary = new Dictionary<string, List<GameObject>>();
 
         foreach (Pool pool in pools)
         {
-            pool_dictionary.Add(pool.tag, InitializePoolObjects(pool, false));
+            poolDictionary.Add(pool.tag, InitializePoolObjects(pool, false));
         }
 
-        foreach (Pool ui_object_pool in ui_object_pools)
+        foreach (Pool uiObjectPool in uiObjectPools)
         {
-            ui_object_pool_dictionary.Add(ui_object_pool.tag, InitializePoolObjects(ui_object_pool, true));
+            uiObjectPoolDictionary.Add(uiObjectPool.tag, InitializePoolObjects(uiObjectPool, true));
         }
     }
 
-    private List<GameObject> InitializePoolObjects(Pool pool, bool ui_object_pool)
+    private List<GameObject> InitializePoolObjects(Pool pool, bool uiObjectPool)
     {
-        List<GameObject> object_pool = new List<GameObject>();
+        List<GameObject> objectPool = new List<GameObject>();
 
-        for (int i = 0; i < pool.min_size; i++)
+        for (int i = 0; i < pool.minSize; i++)
         {
-            Transform initial_parent = ui_object_pool ? canvas_transform : pool_holder;
-            GameObject new_object = Instantiate(pool.prefab, initial_parent);
-            new_object.SetActive(false);
-            object_pool.Add(new_object);
+            Transform initialParent = uiObjectPool ? canvasTransform : poolHolder;
+            GameObject newOBject = Instantiate(pool.prefab, initialParent);
+            newOBject.SetActive(false);
+            objectPool.Add(newOBject);
         }
 
         //print("Initialized pool for objects with tag " + pool.tag);
-        return object_pool;
+        return objectPool;
     }
 
-    private GameObject AddObjectToPool(string tag, bool ui_object_pool)
+    private GameObject AddObjectToPool(string tag, bool uiObjectPool)
     {
-        Transform initial_parent = ui_object_pool ? canvas_transform : pool_holder;
-        List<Pool> pool_list = ui_object_pool ? ui_object_pools : pools;
-        GameObject object_to_spawn = null;
+        Transform initialParent = uiObjectPool ? canvasTransform : poolHolder;
+        List<Pool> poolList = uiObjectPool ? uiObjectPools : pools;
+        GameObject objectToSpawn = null;
 
-        for (int j = 0; j < pool_list.Count; j++)
+        for (int j = 0; j < poolList.Count; j++)
         {
-            if (pool_list[j].tag == tag)
+            if (poolList[j].tag == tag)
             {
-                object_to_spawn = Instantiate(pool_list[j].prefab, initial_parent);
-                object_to_spawn.SetActive(false);
+                objectToSpawn = Instantiate(poolList[j].prefab, initialParent);
+                objectToSpawn.SetActive(false);
                 break;
             }
         }
 
-        if (object_to_spawn != null)
+        if (objectToSpawn != null)
         {
-            if (ui_object_pool)
-                ui_object_pool_dictionary[tag].Add(object_to_spawn);
+            if (uiObjectPool)
+                uiObjectPoolDictionary[tag].Add(objectToSpawn);
             else
-                pool_dictionary[tag].Add(object_to_spawn);
+                poolDictionary[tag].Add(objectToSpawn);
         }
         else
         {
             Debug.LogWarning("No pool with tag " + tag + " was found when trying to create and add a new object to pool.");
         }
 
-        return object_to_spawn;
+        return objectToSpawn;
     }
 
-    private GameObject FindAvailableObjectFromPool(string tag, bool ui_object_pool)
+    private GameObject FindAvailableObjectFromPool(string tag, bool uiObjectPool)
     {
-        List<GameObject> object_pool = ui_object_pool ? ui_object_pool_dictionary[tag] : pool_dictionary[tag];
+        List<GameObject> objectPool = uiObjectPool ? uiObjectPoolDictionary[tag] : poolDictionary[tag];
 
-        for (int i = 0; i < object_pool.Count; i++)
+        for (int i = 0; i < objectPool.Count; i++)
         {
-            if (object_pool[i].activeSelf == false)
+            if (objectPool[i].activeSelf == false)
             {
-                return object_pool[i];
+                return objectPool[i];
             }
         }
 
@@ -103,39 +103,39 @@ public class PoolManager : MonoBehaviour
 
     public GameObject SpawnFromPool(string tag)
     {
-        if (pool_dictionary.ContainsKey(tag))
+        if (poolDictionary.ContainsKey(tag))
         {
             //print("Non-UI object pool found with tag " + tag + ".");
             //Find available object from pool
-            GameObject object_from_pool = FindAvailableObjectFromPool(tag, false);
-            if (object_from_pool != null)
+            GameObject objectFromPool = FindAvailableObjectFromPool(tag, false);
+            if (objectFromPool != null)
             {
-                return object_from_pool;
+                return objectFromPool;
             }
 
             //If no objects available in pool, create and add a new one to the pool
-            object_from_pool = AddObjectToPool(tag, false);
-            if (object_from_pool != null)
+            objectFromPool = AddObjectToPool(tag, false);
+            if (objectFromPool != null)
             {
-                return object_from_pool;
+                return objectFromPool;
             }
         }
-        else if (ui_object_pool_dictionary.ContainsKey(tag))
+        else if (uiObjectPoolDictionary.ContainsKey(tag))
         {
 
             //print("UI object pool found with tag " + tag + ".");
             //Find available object from pool
-            GameObject object_from_pool = FindAvailableObjectFromPool(tag, true);
-            if (object_from_pool != null)
+            GameObject objectFromPool = FindAvailableObjectFromPool(tag, true);
+            if (objectFromPool != null)
             {
-                return object_from_pool;
+                return objectFromPool;
             }
 
             //If no objects available in pool, create and add a new one to the pool
-            object_from_pool = AddObjectToPool(tag, true);
-            if (object_from_pool != null)
+            objectFromPool = AddObjectToPool(tag, true);
+            if (objectFromPool != null)
             {
-                return object_from_pool;
+                return objectFromPool;
             }
         }
         else
